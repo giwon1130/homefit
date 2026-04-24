@@ -42,6 +42,9 @@ homefit:
     refresh-token-ttl-days: 30
     google:
       client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+  crypto:
+    # base64-encoded 32 bytes. Railway AES_ENCRYPTION_KEY env var.
+    aes-key-base64: ${AES_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
 
 logging:
   level:
