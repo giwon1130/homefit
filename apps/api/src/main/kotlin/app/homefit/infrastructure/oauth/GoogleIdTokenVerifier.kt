@@ -22,9 +22,9 @@ class GoogleIdTokenVerifierAdapter(props: AuthProperties) {
         .setAudience(listOf(props.google.clientId))
         .build()
 
-    /** 유효한 id_token이면 사용자 정보 반환, 아니면 null. */
+    /** 유효한 id_token이면 사용자 정보 반환, 아니면 null. 형식 오류/서명 실패 등 모든 실패를 null로 정규화. */
     fun verify(idTokenString: String): GoogleUserInfo? {
-        val token = verifier.verify(idTokenString) ?: return null
+        val token = runCatching { verifier.verify(idTokenString) }.getOrNull() ?: return null
         val payload = token.payload
         val email = payload.email ?: return null
         return GoogleUserInfo(
