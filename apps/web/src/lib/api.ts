@@ -78,3 +78,51 @@ export interface EligibilityResp {
   bestSupplyType: SupplyType | null;
   details: EligibilityDetailResp[];
 }
+
+// ---- profile ----
+
+export type HouseholdRelation =
+  | "SPOUSE"
+  | "CHILD"
+  | "PARENT"
+  | "GRANDPARENT"
+  | "OTHER";
+
+export interface ProfileCore {
+  birthDate?: string | null;
+  marriageDate?: string | null;
+  isHouseholder?: boolean | null;
+  isFirstTimeBuyer?: boolean | null;
+  noHomeSince?: string | null;
+  subscriptionAccountOpenedAt?: string | null;
+  subscriptionDepositMonths?: number | null;
+  subscriptionDepositTotal?: number | null;
+}
+
+export interface HouseholdMember {
+  relation: HouseholdRelation;
+  birthDate?: string | null;
+}
+
+export interface FullProfile {
+  userId: number;
+  core: ProfileCore;
+  householdMembers: HouseholdMember[];
+  incomes: Array<{ year: number; selfAmount?: number; spouseAmount?: number }>;
+  assets: { netWorth?: number; realEstate?: number } | null;
+  residences: unknown[];
+  workplaces: unknown[];
+  preferences: unknown | null;
+  housingHistory: unknown[];
+}
+
+export interface ScoreResp {
+  total: number;
+  max: number;
+  breakdown: {
+    noHomePeriod: { points: number; max: number };
+    dependents: { points: number; max: number };
+    accountAge: { points: number; max: number };
+  };
+  notes: string[];
+}

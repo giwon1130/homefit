@@ -17,6 +17,9 @@ export default function Header() {
           </Link>
           {status === "authenticated" ? (
             <>
+              <Link href="/profile" className="text-zinc-600 hover:text-zinc-900">
+                프로필
+              </Link>
               <span className="hidden text-zinc-600 sm:inline">
                 {session.user?.name ?? session.user?.email}
               </span>
