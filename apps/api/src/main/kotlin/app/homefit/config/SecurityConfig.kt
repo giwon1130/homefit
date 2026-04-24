@@ -33,6 +33,11 @@ class SecurityConfig {
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                     ).permitAll()
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.GET,
+                        "/api/v1/listings",
+                        "/api/v1/listings/*",
+                    ).permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling {
