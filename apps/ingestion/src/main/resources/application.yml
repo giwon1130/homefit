@@ -23,6 +23,15 @@ management:
       exposure:
         include: health,info
 
+homefit:
+  publicdata:
+    base-url: https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/
+    api-key: ${PUBLIC_DATA_API_KEY:}
+    page-size: 500
+    lookback-days: 90
+  ingestion:
+    admin-token: ${INGESTION_ADMIN_TOKEN:dev-admin-token-change-me}
+
 logging:
   level:
     root: INFO
