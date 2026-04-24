@@ -18,9 +18,7 @@ homefit/
 │   └── mobile/       # React Native + Expo (iOS/Android)
 ├── packages/
 │   └── shared-schema/  # OpenAPI → TS/Swift/Kotlin 타입
-├── infra/
-│   ├── railway/        # Railway 설정
-│   └── migrations/     # Flyway SQL
+├── infra/              # 운영 스크립트 / Railway 참고 설정
 ├── docs/               # 설계 문서
 └── .github/workflows/  # CI/CD
 ```

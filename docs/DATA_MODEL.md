@@ -1,6 +1,6 @@
 # Data Model — homefit
 
-PostgreSQL 16 + PostGIS. Flyway 마이그레이션으로 관리 (`infra/migrations/`).
+PostgreSQL 16 + PostGIS. Flyway 마이그레이션으로 관리 (`apps/api/src/main/resources/db/migration/`).
 
 ## 1. 도메인별 테이블
 
@@ -299,6 +299,7 @@ eligibility_rule_versions (
 
 ## 3. 마이그레이션 컨벤션
 
+- 위치: `apps/api/src/main/resources/db/migration/` (classpath로 로딩)
 - 파일명: `V{yyyyMMddHHmm}__{snake_case_description}.sql`
 - 초기 버전은 도메인별 분할: `V202604240001__init_users.sql`, `V202604240002__init_profiles.sql`, ...
 - PostGIS 확장: `V202604240000__enable_extensions.sql` (`CREATE EXTENSION postgis; CREATE EXTENSION pgcrypto;`)

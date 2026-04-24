@@ -29,7 +29,7 @@ coverage/
 *.class
 *.jar
 *.war
-!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # iOS
 apps/mobile/ios/
