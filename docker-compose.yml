@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: homefit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: homefit
+      POSTGRES_USER: homefit
+      POSTGRES_PASSWORD: homefit
+    ports:
+      - "5432:5432"
+    volumes:
+      - homefit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homefit -d homefit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: homefit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - homefit_redis:/data
+
+volumes:
+  homefit_pgdata:
+  homefit_redis:

@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: homefit-ingestion
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/homefit}
+    username: ${DATABASE_USER:homefit}
+    password: ${DATABASE_PASSWORD:homefit}
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+  flyway:
+    enabled: false   # api 서비스가 마이그레이션 담당
+
+server:
+  port: ${PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    app.homefit.ingestion: DEBUG
