@@ -63,5 +63,5 @@ data class ApplyhomeAptModelItem(
     @JsonProperty("HOUSE_TY") val houseTy: String? = null,       // 주택형 (예: 84.92A)
     @JsonProperty("SUPLY_AR") val supplyArea: String? = null,     // 공급면적 (㎡, 문자열)
     @JsonProperty("SUPLY_HSHLDCO") val supplyCount: Int? = null,
-    @JsonProperty("LTTOT_TOP_AMOUNT") val topAmountThousandKrw: Long? = null, // 최고분양가 (천원 단위)
+    @JsonProperty("LTTOT_TOP_AMOUNT") val topAmount10kKrw: Long? = null, // 최고분양가 (만원 단위)
 )

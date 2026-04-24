@@ -40,7 +40,7 @@ class ApplyhomeMapperTest {
                 houseTy = "84.92A",
                 supplyArea = "84.92",
                 supplyCount = 120,
-                topAmountThousandKrw = 1_500_000L, // 15억
+                topAmount10kKrw = 150_000L, // 15억 = 15만 만원
             ),
         )
 

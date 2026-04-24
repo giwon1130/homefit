@@ -64,7 +64,7 @@ class ApplyhomeMapper(
         unitType = model.houseTy,
         sizeM2 = model.supplyArea?.let { runCatching { BigDecimal(it) }.getOrNull() },
         supplyCount = model.supplyCount,
-        priceMaxKrw = model.topAmountThousandKrw?.let { it * 1_000L },
+        priceMaxKrw = model.topAmount10kKrw?.let { it * 10_000L },
         rawJson = objectMapper.writeValueAsString(model),
     )
 
