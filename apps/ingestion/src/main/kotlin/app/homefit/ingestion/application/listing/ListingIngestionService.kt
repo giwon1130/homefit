@@ -33,7 +33,6 @@ class ListingIngestionService(
         val runId = runs.start(ListingSource.PUBLIC_DATA_APT.code)
         return try {
             val from = LocalDate.now().minusDays(lookbackDays)
-            val models = fetchAllModels(from).groupBy { it.houseManageNo ?: it.pblancNo ?: "" }
             var page = 1
             var pages = 0
             var upserted = 0
@@ -43,7 +42,8 @@ class ListingIngestionService(
                 if (resp.data.isEmpty()) break
                 for (item in resp.data) {
                     val key = item.houseManageNo ?: item.pblancNo ?: continue
-                    val raw = mapper.toRawListing(item, models[key].orEmpty()) ?: continue
+                    val models = fetchModelsForListing(key)
+                    val raw = mapper.toRawListing(item, models) ?: continue
                     listings.upsert(raw)
                     upserted++
                 }
@@ -60,15 +60,23 @@ class ListingIngestionService(
         }
     }
 
-    private fun fetchAllModels(from: LocalDate): List<ApplyhomeAptModelItem> {
+    /**
+     * 공고 한 건의 주택형(평형) 목록. Mdl 엔드포인트는 날짜 필터가 없으므로
+     * HOUSE_MANAGE_NO 로 직접 조회. 한 공고당 보통 3~10건이라 1페이지면 끝.
+     */
+    private fun fetchModelsForListing(houseManageNo: String): List<ApplyhomeAptModelItem> {
         val all = mutableListOf<ApplyhomeAptModelItem>()
         var page = 1
         while (true) {
-            val resp = client.fetchAptModels(page, from)
+            val resp = client.fetchAptModels(page, houseManageNo)
             if (resp.data.isEmpty()) break
             all += resp.data
             if (resp.data.size < resp.perPage) break
             page++
+            if (page > 20) {  // 안전장치
+                log.warn("model fetch exceeded 20 pages for {}", houseManageNo)
+                break
+            }
         }
         return all
     }

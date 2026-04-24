@@ -28,26 +28,33 @@ class PublicDataClient(
         .codecs { it.defaultCodecs().maxInMemorySize(16 * 1024 * 1024) }
         .build()
 
-    fun fetchAptListings(page: Int, announcementFrom: LocalDate?): ApplyhomeAptListingsResponse =
-        get("getAPTLttotPblancDetail", page, announcementFrom, ApplyhomeAptListingsResponse::class.java)
+    fun fetchAptListings(page: Int, announcementFrom: LocalDate?): ApplyhomeAptListingsResponse {
+        val cond = announcementFrom?.let { mapOf("RCRIT_PBLANC_DE::GTE" to it.toString()) } ?: emptyMap()
+        return get("getAPTLttotPblancDetail", page, cond, ApplyhomeAptListingsResponse::class.java)
+    }
 
-    fun fetchAptModels(page: Int, announcementFrom: LocalDate?): ApplyhomeAptModelsResponse =
-        get("getAPTLttotPblancMdl", page, announcementFrom, ApplyhomeAptModelsResponse::class.java)
+    /**
+     * Mdl 엔드포인트는 공고 단위 필드(RCRIT_PBLANC_DE)가 없으므로 날짜 필터를 받지 않음.
+     * houseManageNo 가 주어지면 해당 공고의 주택형만 가져옴 (정상 케이스).
+     * null이면 전체 페이지 순회 — 백필/복구용.
+     */
+    fun fetchAptModels(page: Int, houseManageNo: String? = null): ApplyhomeAptModelsResponse {
+        val cond = houseManageNo?.let { mapOf("HOUSE_MANAGE_NO::EQ" to it) } ?: emptyMap()
+        return get("getAPTLttotPblancMdl", page, cond, ApplyhomeAptModelsResponse::class.java)
+    }
 
-    private fun <T> get(operation: String, page: Int, announcementFrom: LocalDate?, type: Class<T>): T {
+    private fun <T> get(operation: String, page: Int, cond: Map<String, String>, type: Class<T>): T {
         val uriBuilder: (UriBuilder) -> URI = { b ->
             b.path(operation)
                 .queryParam("page", page)
                 .queryParam("perPage", pageSize)
                 .queryParam("returnType", "JSON")
                 .apply {
-                    if (announcementFrom != null) {
-                        queryParam("cond[RCRIT_PBLANC_DE::GTE]", announcementFrom.toString())
-                    }
+                    cond.forEach { (k, v) -> queryParam("cond[$k]", v) }
                 }
                 .build()
         }
-        log.debug("publicdata GET {} page={} from={}", operation, page, announcementFrom)
+        log.debug("publicdata GET {} page={} cond={}", operation, page, cond)
         return webClient.get()
             .uri(uriBuilder)
             .retrieve()
