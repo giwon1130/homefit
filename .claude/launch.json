@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "infra (db+redis)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "-d", "db", "redis"],
+      "port": 5432
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd apps/api && ./gradlew bootRun"],
+      "port": 8080
+    },
+    {
+      "name": "ingestion",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd apps/ingestion && ./gradlew bootRun"],
+      "port": 8081
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-F", "@homefit/web", "dev"],
+      "port": 3000
+    }
+  ]
+}
