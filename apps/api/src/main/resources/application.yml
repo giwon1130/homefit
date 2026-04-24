@@ -45,6 +45,32 @@ homefit:
   crypto:
     # base64-encoded 32 bytes. Railway AES_ENCRYPTION_KEY env var.
     aes-key-base64: ${AES_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  eligibility:
+    # 도시근로자 월평균소득 (원, 2025 추정치 기준 — 매년 국토부 고시 변경 시 업데이트)
+    urban-worker-monthly-income:
+      1: 3600000
+      2: 5400000
+      3: 7200000
+      4: 8200000
+      5: 8800000
+      6: 9400000
+    rules:
+      private-sale:
+        newlywed: { marriage-years-max: 7, income-pct-limit: 140 }
+        first-time: { income-pct-limit: 130, require-no-home: true }
+        multi-child: { min-children: 2 }
+        general: true
+      public-sale:
+        newlywed: { marriage-years-max: 7, income-pct-limit: 130 }
+        first-time: { income-pct-limit: 130, require-no-home: true }
+        multi-child: { min-children: 2 }
+        general: true
+      newlywed-hope:
+        newlywed: { marriage-years-max: 7, income-pct-limit: 130 }
+        general: false
+      happy-house:
+        newlywed: { marriage-years-max: 7, income-pct-limit: 100 }
+        general: true
 
 logging:
   level:
