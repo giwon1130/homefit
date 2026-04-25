@@ -88,11 +88,26 @@ if [ "$items_count" -eq 0 ]; then
 fi
 
 echo "pushing $items_count polygons..."
-body=$(jq -n --argjson items "$items_json" '{items: $items}')
-curl -sS -X POST "$INGEST/admin/ingestion/polygons" \
-  -H "Content-Type: application/json" \
-  -H "X-Admin-Token: $INGESTION_ADMIN_TOKEN" \
-  -d "$body" -w "\nHTTP %{http_code}\n"
+# 폴리곤은 좌표가 많아 ARG_MAX 초과 가능 → 파일로 빼고 @로 전송
+tmp_body=$(mktemp)
+trap 'rm -f "$tmp_body"' EXIT
+echo "$items_json" | jq '{items: .}' > "$tmp_body"
+
+# 한 번에 다 보내면 Railway/Cloudflare body 크기 제한 걸릴 수 있어 50건씩 청크
+total_items=$(jq '.items | length' < "$tmp_body")
+chunk=50
+pushed=0
+for ((i=0; i<total_items; i+=chunk)); do
+  chunk_file=$(mktemp)
+  jq --argjson off "$i" --argjson n "$chunk" '{items: (.items[$off:$off+$n])}' < "$tmp_body" > "$chunk_file"
+  status=$(curl -sS -o /tmp/_polygon_resp.json -X POST "$INGEST/admin/ingestion/polygons" \
+    -H "Content-Type: application/json" \
+    -H "X-Admin-Token: $INGESTION_ADMIN_TOKEN" \
+    --data-binary "@$chunk_file" -w "%{http_code}")
+  rm -f "$chunk_file"
+  body=$(cat /tmp/_polygon_resp.json)
+  echo "  chunk $((i/chunk + 1)): HTTP $status — $body"
+done
 
 echo ""
 echo "summary: processed=$processed ok=$ok fail=$fail"
