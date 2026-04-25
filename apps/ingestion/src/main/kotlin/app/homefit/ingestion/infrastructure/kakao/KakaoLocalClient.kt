@@ -11,15 +11,13 @@ import java.math.BigDecimal
 data class GeoPoint(val latitude: BigDecimal, val longitude: BigDecimal)
 
 /**
- * Kakao Local API 주소 검색.
- * https://developers.kakao.com/docs/latest/ko/local/dev-guide#address-coord
- *
- * 응답에서 `documents[0].x` = 경도, `.y` = 위도 (둘 다 문자열).
+ * Kakao Local API 주소 검색. 비즈 앱 인증 후 카카오맵 활성화 필요.
+ * 현재는 비활성 — VWorldGeocoderClient 가 기본 Geocoder.
  */
 @Component
 class KakaoLocalClient(
     @Value("\${homefit.kakao.rest-api-key:}") private val apiKey: String,
-) {
+) : Geocoder {
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val webClient: WebClient = WebClient.builder()
@@ -28,7 +26,7 @@ class KakaoLocalClient(
         .codecs { it.defaultCodecs().maxInMemorySize(2 * 1024 * 1024) }
         .build()
 
-    fun geocode(address: String): GeoPoint? {
+    override fun geocode(address: String): GeoPoint? {
         if (apiKey.isBlank()) {
             log.warn("KAKAO_REST_API_KEY not set — geocoding skipped")
             return null

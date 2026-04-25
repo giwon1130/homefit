@@ -3,7 +3,7 @@ package app.homefit.ingestion.application.listing
 import app.homefit.ingestion.config.PublicDataProperties
 import app.homefit.ingestion.domain.listing.ListingSource
 import app.homefit.ingestion.domain.listing.RawListing
-import app.homefit.ingestion.infrastructure.kakao.KakaoLocalClient
+import app.homefit.ingestion.infrastructure.kakao.Geocoder
 import app.homefit.ingestion.infrastructure.persistence.IngestionRunRepository
 import app.homefit.ingestion.infrastructure.persistence.ListingRepository
 import app.homefit.ingestion.infrastructure.publicdata.ApplyhomeMapper
@@ -23,7 +23,7 @@ class ListingIngestionService(
     private val listings: ListingRepository,
     private val runs: IngestionRunRepository,
     private val props: PublicDataProperties,
-    private val kakao: KakaoLocalClient,
+    private val geocoder: Geocoder,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -67,7 +67,7 @@ class ListingIngestionService(
 
     /** 주소 → 좌표 1회 호출. 실패해도 listing 자체는 저장. */
     private fun enrichWithCoordinates(raw: RawListing): RawListing =
-        raw.address?.let { kakao.geocode(it) }?.let {
+        raw.address?.let { geocoder.geocode(it) }?.let {
             raw.copy(latitude = it.latitude, longitude = it.longitude)
         } ?: raw
 
@@ -76,7 +76,7 @@ class ListingIngestionService(
         val pending = listings.findIdsAndAddressesWithoutGeo(limit)
         var success = 0
         for ((id, address) in pending) {
-            val coords = kakao.geocode(address) ?: continue
+            val coords = geocoder.geocode(address) ?: continue
             listings.updateCoordinates(id, coords.latitude, coords.longitude)
             success++
         }
