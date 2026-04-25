@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { HouseholdMember, HouseholdRelation, ProfileCore } from "@/lib/api";
+import type {
+  HouseholdMember,
+  HouseholdRelation,
+  ProfileCore,
+  Workplace,
+  WorkplaceOwner,
+} from "@/lib/api";
 import { saveProfile } from "./actions";
 
 const RELATION_LABEL: Record<HouseholdRelation, string> = {
@@ -28,6 +34,15 @@ type MemberFormState = {
   birthDate: string;
 };
 
+type WorkplaceFormState = {
+  owner: WorkplaceOwner;
+  label: string;
+  address: string;
+  arrivalTime: string;
+};
+
+const OWNER_LABEL: Record<WorkplaceOwner, string> = { SELF: "본인", SPOUSE: "배우자" };
+
 function toState(core: ProfileCore): CoreFormState {
   return {
     birthDate: core.birthDate ?? "",
@@ -50,15 +65,29 @@ function membersToState(list: HouseholdMember[]): MemberFormState[] {
   }));
 }
 
+function workplacesToState(list: Workplace[]): WorkplaceFormState[] {
+  return list.map((w) => ({
+    owner: w.owner,
+    label: w.label ?? "",
+    address: w.address,
+    arrivalTime: (w.arrivalTime ?? "09:00:00").slice(0, 5),
+  }));
+}
+
 export default function ProfileForm({
   initialCore,
   initialMembers,
+  initialWorkplaces,
 }: {
   initialCore: ProfileCore;
   initialMembers: HouseholdMember[];
+  initialWorkplaces: Workplace[];
 }) {
   const [core, setCore] = useState<CoreFormState>(toState(initialCore));
   const [members, setMembers] = useState<MemberFormState[]>(membersToState(initialMembers));
+  const [workplaces, setWorkplaces] = useState<WorkplaceFormState[]>(
+    workplacesToState(initialWorkplaces),
+  );
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
@@ -70,6 +99,16 @@ export default function ProfileForm({
   const removeMember = (idx: number) => setMembers((ms) => ms.filter((_, i) => i !== idx));
   const updateMember = (idx: number, patch: Partial<MemberFormState>) =>
     setMembers((ms) => ms.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+
+  const addWorkplace = () =>
+    setWorkplaces((ws) => [
+      ...ws,
+      { owner: "SELF", label: "", address: "", arrivalTime: "09:00" },
+    ]);
+  const removeWorkplace = (idx: number) =>
+    setWorkplaces((ws) => ws.filter((_, i) => i !== idx));
+  const updateWorkplace = (idx: number, patch: Partial<WorkplaceFormState>) =>
+    setWorkplaces((ws) => ws.map((w, i) => (i === idx ? { ...w, ...patch } : w)));
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +126,14 @@ export default function ProfileForm({
           subscriptionDepositTotal: core.subscriptionDepositTotal,
         },
         members: members.map((m) => ({ relation: m.relation, birthDate: m.birthDate })),
+        workplaces: workplaces
+          .filter((w) => w.address.trim().length > 0)
+          .map((w) => ({
+            owner: w.owner,
+            label: w.label || null,
+            address: w.address,
+            arrivalTime: w.arrivalTime,
+          })),
       });
       if (result.ok) {
         setMessage({ kind: "ok", text: "저장 완료" });
@@ -169,6 +216,81 @@ export default function ProfileForm({
             className="input"
           />
         </Field>
+      </Section>
+
+      <Section title="직장 (통근시간 계산용)">
+        <div className="space-y-2 sm:col-span-2">
+          {workplaces.length === 0 && (
+            <p className="text-sm text-zinc-500">
+              없음. 직장 추가하면 매칭 화면 통근 점수가 활성화돼요.
+            </p>
+          )}
+          {workplaces.map((w, idx) => (
+            <div key={idx} className="rounded border border-zinc-200 bg-white p-3 space-y-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-24">
+                  <label className="text-xs text-zinc-500">소유자</label>
+                  <select
+                    value={w.owner}
+                    onChange={(e) =>
+                      updateWorkplace(idx, { owner: e.target.value as WorkplaceOwner })
+                    }
+                    className="input"
+                  >
+                    {(Object.keys(OWNER_LABEL) as WorkplaceOwner[]).map((o) => (
+                      <option key={o} value={o}>
+                        {OWNER_LABEL[o]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-28">
+                  <label className="text-xs text-zinc-500">출근시각</label>
+                  <input
+                    type="time"
+                    value={w.arrivalTime}
+                    onChange={(e) => updateWorkplace(idx, { arrivalTime: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <label className="text-xs text-zinc-500">레이블 (선택)</label>
+                  <input
+                    type="text"
+                    value={w.label}
+                    placeholder="회사명"
+                    onChange={(e) => updateWorkplace(idx, { label: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeWorkplace(idx)}
+                  className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                >
+                  삭제
+                </button>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500">주소</label>
+                <input
+                  type="text"
+                  value={w.address}
+                  onChange={(e) => updateWorkplace(idx, { address: e.target.value })}
+                  placeholder="서울특별시 강남구 테헤란로 123"
+                  className="input"
+                />
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addWorkplace}
+            className="rounded border border-dashed border-zinc-400 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+          >
+            + 직장 추가
+          </button>
+        </div>
       </Section>
 
       <Section title="가족 구성 (본인 제외)">

@@ -37,6 +37,7 @@ export default async function ProfilePage() {
       <ProfileForm
         initialCore={profile.core}
         initialMembers={profile.householdMembers}
+        initialWorkplaces={profile.workplaces}
       />
     </div>
   );
