@@ -97,6 +97,13 @@ class ListingRepository(
                 .addValue("lng", longitude),
         )
 
+    @Transactional
+    fun updatePolygon(id: Long, geojson: String): Int =
+        jdbc.update(
+            "UPDATE listings SET polygon_geojson = CAST(:json AS jsonb), polygon_fetched_at = now(), updated_at = now() WHERE id = :id",
+            MapSqlParameterSource().addValue("id", id).addValue("json", geojson),
+        )
+
     fun findIdsAndAddressesWithoutGeo(limit: Int = 200): List<Pair<Long, String>> =
         jdbc.query(
             "SELECT id, address FROM listings WHERE geocoded_at IS NULL AND address IS NOT NULL ORDER BY id LIMIT :limit",

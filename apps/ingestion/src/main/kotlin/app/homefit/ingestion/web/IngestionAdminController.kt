@@ -26,6 +26,8 @@ class IngestionAdminController(
 ) {
     data class CoordEntry(val id: Long, val latitude: BigDecimal, val longitude: BigDecimal)
     data class BulkCoordRequest(val items: List<CoordEntry>)
+    data class PolygonEntry(val id: Long, val geojson: Map<String, Any>)
+    data class BulkPolygonRequest(val items: List<PolygonEntry>)
     @PostMapping("/run")
     fun runApt(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
         require(token)
@@ -57,6 +59,22 @@ class IngestionAdminController(
         for (entry in body.items) {
             val n = listings.updateCoordinates(entry.id, entry.latitude, entry.longitude)
             updated += n
+        }
+        return mapOf("received" to body.items.size, "updated" to updated)
+    }
+
+    /** 외부에서 미리 가져온 폴리곤 GeoJSON 일괄 업데이트 (Railway → VWorld Data API 막힘 우회). */
+    @PostMapping("/polygons")
+    fun bulkUpdatePolygons(
+        @RequestHeader("X-Admin-Token") token: String,
+        @RequestBody body: BulkPolygonRequest,
+    ): Map<String, Any> {
+        require(token)
+        val mapper = com.fasterxml.jackson.databind.ObjectMapper()
+        var updated = 0
+        for (entry in body.items) {
+            val json = mapper.writeValueAsString(entry.geojson)
+            updated += listings.updatePolygon(entry.id, json)
         }
         return mapOf("received" to body.items.size, "updated" to updated)
     }
