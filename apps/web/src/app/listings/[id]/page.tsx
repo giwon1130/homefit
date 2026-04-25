@@ -3,6 +3,7 @@ import Link from "next/link";
 import { apiFetch, type EligibilityResp, type ListingDetail } from "@/lib/api";
 import { auth } from "@/auth";
 import FavoriteButton from "@/components/FavoriteButton";
+import ListingMap from "@/components/ListingMap";
 
 export const dynamic = "force-dynamic";
 
@@ -118,29 +119,22 @@ export default async function ListingDetailPage({ params }: Props) {
       </header>
 
       {listing.latitude != null && listing.longitude != null && (
-        (() => {
-          const lat = listing.latitude;
-          const lng = listing.longitude;
-          return (
-            <section>
-              <h2 className="mb-2 font-semibold">위치</h2>
-              <iframe
-                title="지도"
-                className="w-full rounded-lg border border-zinc-200"
-                height={280}
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.01}%2C${lat - 0.01}%2C${lng + 0.01}%2C${lat + 0.01}&layer=mapnik&marker=${lat}%2C${lng}`}
-              />
-              <a
-                href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block text-xs text-zinc-500 hover:text-zinc-900"
-              >
-                크게 보기 →
-              </a>
-            </section>
-          );
-        })()
+        <section>
+          <h2 className="mb-2 font-semibold">위치</h2>
+          <ListingMap
+            points={[
+              {
+                id: listing.id,
+                lat: listing.latitude,
+                lng: listing.longitude,
+                title: listing.name,
+                subtitle: listing.address ?? undefined,
+                highlight: true,
+              },
+            ]}
+            className="h-[320px]"
+          />
+        </section>
       )}
 
       {eligibility && (
