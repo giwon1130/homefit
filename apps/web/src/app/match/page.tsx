@@ -69,8 +69,10 @@ export default async function MatchPage() {
       lat: l.latitude as number,
       lng: l.longitude as number,
       title: l.name,
-      subtitle: `${l.sido ?? ""} ${l.sigungu ?? ""} · 점수 ${score.total}/${score.max}`,
+      subtitle: `${l.sido ?? ""} ${l.sigungu ?? ""}`,
       href: `/listings/${l.id}`,
+      score: score.total,
+      totalSupply: l.totalSupply,
     }));
 
   const workplaces =
@@ -181,9 +183,30 @@ export default async function MatchPage() {
             workplaces={workplaces}
             className="h-[400px] lg:h-full"
           />
-          <p className="mt-2 text-xs text-zinc-500">
-            🔴 빨간 점이 청약 단지, 🏢 초록은 직장. 마커 클릭으로 정보를 볼 수 있어요.
-          </p>
+          <div className="mt-2 space-y-1 text-xs text-zinc-500">
+            <p>원의 크기는 단지 공급세대수, 색상은 매칭 점수에 비례:</p>
+            <div className="flex flex-wrap gap-2 text-[10px]">
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-emerald-500/40 ring-2 ring-emerald-700" />
+                70+
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-blue-500/40 ring-2 ring-blue-700" />
+                50~69
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-amber-500/40 ring-2 ring-amber-700" />
+                30~49
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-full bg-slate-400/40 ring-2 ring-slate-600" />
+                ~29
+              </span>
+              <span className="inline-flex items-center gap-1">
+                🏢 직장
+              </span>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
