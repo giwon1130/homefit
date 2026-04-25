@@ -20,6 +20,9 @@ export default function Header() {
               <Link href="/match" className="text-zinc-600 hover:text-zinc-900">
                 내맞춤
               </Link>
+              <Link href="/favorites" className="text-zinc-600 hover:text-zinc-900">
+                즐겨찾기
+              </Link>
               <Link href="/profile" className="text-zinc-600 hover:text-zinc-900">
                 프로필
               </Link>
