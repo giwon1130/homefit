@@ -3,19 +3,15 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
-// Leaflet 기본 아이콘이 번들러와 호환 안 됨 → 명시적 PNG 지정
-const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// 직장 마커용 div 아이콘
+const workplaceIcon = L.divIcon({
+  className: "leaflet-workplace",
+  html: `<div style="background:#0d9488;border:2px solid white;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.3);">🏢</div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
 });
-L.Marker.prototype.options.icon = defaultIcon;
 
 export interface MapPoint {
   id: number;
@@ -24,7 +20,32 @@ export interface MapPoint {
   title: string;
   subtitle?: string;
   href?: string;
+  /** 0~100 점수 — 색상 결정에 사용 */
+  score?: number;
+  /** 단지 규모 — 반경 가중치. 없으면 기본 80m */
+  totalSupply?: number;
   highlight?: boolean;
+}
+
+/**
+ * 점수에 따른 색상 (낮을수록 회색, 높을수록 진한 파랑/녹색).
+ */
+function colorForScore(score?: number): { fill: string; stroke: string } {
+  if (score == null) return { fill: "#94a3b8", stroke: "#475569" };
+  if (score >= 70) return { fill: "#10b981", stroke: "#047857" }; // emerald
+  if (score >= 50) return { fill: "#3b82f6", stroke: "#1d4ed8" }; // blue
+  if (score >= 30) return { fill: "#f59e0b", stroke: "#b45309" }; // amber
+  return { fill: "#94a3b8", stroke: "#475569" }; // slate
+}
+
+/** 단지 규모에 따른 반경(m). 부재 시 80m. */
+function radiusFor(supply?: number): number {
+  if (!supply) return 80;
+  if (supply > 2000) return 200;
+  if (supply > 1000) return 160;
+  if (supply > 500) return 130;
+  if (supply > 200) return 100;
+  return 70;
 }
 
 export default function ListingMap({
@@ -48,7 +69,7 @@ export default function ListingMap({
   );
 
   const center: [number, number] = useMemo(() => {
-    if (validPoints.length === 0) return [37.5665, 126.978]; // 서울시청 기본
+    if (validPoints.length === 0) return [37.5665, 126.978];
     const lat = validPoints.reduce((s, p) => s + p.lat, 0) / validPoints.length;
     const lng = validPoints.reduce((s, p) => s + p.lng, 0) / validPoints.length;
     return [lat, lng];
@@ -77,25 +98,40 @@ export default function ListingMap({
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds points={validPoints} workplaces={validWorkplaces} />
-        {validPoints.map((p) => (
-          <Marker
-            key={`l-${p.id}`}
-            position={[p.lat, p.lng]}
-            icon={p.id === selectedId || p.highlight ? highlightedIcon : defaultIcon}
-          >
-            <Popup>
-              <div className="space-y-1">
-                <strong>{p.title}</strong>
-                {p.subtitle && <div className="text-xs text-zinc-500">{p.subtitle}</div>}
-                {p.href && (
-                  <a href={p.href} className="text-xs text-blue-600 hover:underline">
-                    상세 보기 →
-                  </a>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {validPoints.map((p) => {
+          const isHi = p.id === selectedId || p.highlight;
+          const c = colorForScore(p.score);
+          return (
+            <Circle
+              key={`l-${p.id}`}
+              center={[p.lat, p.lng]}
+              radius={radiusFor(p.totalSupply)}
+              pathOptions={{
+                fillColor: c.fill,
+                color: c.stroke,
+                fillOpacity: isHi ? 0.55 : 0.35,
+                weight: isHi ? 3 : 1.5,
+              }}
+            >
+              <Popup>
+                <div className="space-y-1">
+                  <strong>{p.title}</strong>
+                  {p.subtitle && <div className="text-xs text-zinc-500">{p.subtitle}</div>}
+                  {p.score != null && (
+                    <div className="text-xs">
+                      매칭 점수: <span className="font-semibold">{p.score}</span> / 100
+                    </div>
+                  )}
+                  {p.href && (
+                    <a href={p.href} className="text-xs text-blue-600 hover:underline">
+                      상세 보기 →
+                    </a>
+                  )}
+                </div>
+              </Popup>
+            </Circle>
+          );
+        })}
         {validWorkplaces.map((w, i) => (
           <Marker key={`w-${i}`} position={[w.lat, w.lng]} icon={workplaceIcon}>
             <Popup>
@@ -107,20 +143,6 @@ export default function ListingMap({
     </div>
   );
 }
-
-const highlightedIcon = L.divIcon({
-  className: "leaflet-highlighted",
-  html: `<div style="background:#dc2626;border:2px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 2px #dc2626;"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-const workplaceIcon = L.divIcon({
-  className: "leaflet-workplace",
-  html: `<div style="background:#0d9488;border:2px solid white;border-radius:4px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;line-height:1;">🏢</div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-});
 
 function FitBounds({
   points,
@@ -141,7 +163,7 @@ function FitBounds({
     if (key === lastKey.current) return;
     lastKey.current = key;
     if (all.length === 1) {
-      map.setView(all[0], 13);
+      map.setView(all[0], 14);
     } else {
       const bounds = L.latLngBounds(all);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
