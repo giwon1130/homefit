@@ -35,6 +35,7 @@ class MatchingScoreCalculatorTest {
     private fun listing(sido: String? = "서울특별시"): Listing = Listing(
         id = 1, source = "x", sourceRef = "1", listingType = ListingType.PRIVATE_SALE,
         name = "n", developer = null, sido = sido, sigungu = null, address = null,
+        latitude = null, longitude = null,
         applicationStart = null, applicationEnd = null, announcementDate = null,
         winnerAnnouncementDate = null, contractStartDate = null, contractEndDate = null,
         moveInDate = null, totalSupply = null, rawDocumentUrl = null,

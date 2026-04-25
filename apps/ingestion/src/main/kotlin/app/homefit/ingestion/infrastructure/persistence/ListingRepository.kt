@@ -23,11 +23,13 @@ class ListingRepository(
         val sql = """
             INSERT INTO listings (
                 source, source_ref, listing_type, name, developer, sido, sigungu, address,
+                latitude, longitude, geocoded_at,
                 application_start, application_end, announcement_date, winner_announcement_date,
                 contract_start_date, contract_end_date, move_in_date, total_supply,
                 raw_document_url, raw_json, updated_at
             ) VALUES (
                 :source, :source_ref, :listing_type, :name, :developer, :sido, :sigungu, :address,
+                :latitude, :longitude, :geocoded_at,
                 :application_start, :application_end, :announcement_date, :winner_announcement_date,
                 :contract_start_date, :contract_end_date, :move_in_date, :total_supply,
                 :raw_document_url, CAST(:raw_json AS jsonb), now()
@@ -39,6 +41,9 @@ class ListingRepository(
                 sido                     = EXCLUDED.sido,
                 sigungu                  = EXCLUDED.sigungu,
                 address                  = EXCLUDED.address,
+                latitude                 = COALESCE(EXCLUDED.latitude, listings.latitude),
+                longitude                = COALESCE(EXCLUDED.longitude, listings.longitude),
+                geocoded_at              = COALESCE(EXCLUDED.geocoded_at, listings.geocoded_at),
                 application_start        = EXCLUDED.application_start,
                 application_end          = EXCLUDED.application_end,
                 announcement_date        = EXCLUDED.announcement_date,
@@ -62,6 +67,9 @@ class ListingRepository(
             .addValue("sido", listing.sido)
             .addValue("sigungu", listing.sigungu)
             .addValue("address", listing.address)
+            .addValue("latitude", listing.latitude)
+            .addValue("longitude", listing.longitude)
+            .addValue("geocoded_at", if (listing.latitude != null) java.time.OffsetDateTime.now() else null)
             .addValue("application_start", listing.applicationStart)
             .addValue("application_end", listing.applicationEnd)
             .addValue("announcement_date", listing.announcementDate)
@@ -77,6 +85,23 @@ class ListingRepository(
         jdbc.update(sql, params, keyHolder, arrayOf("id"))
         return keyHolder.key?.toLong() ?: error("failed to get listing id")
     }
+
+    /** 기존 listing 좌표만 업데이트 (백필용). */
+    @Transactional
+    fun updateCoordinates(id: Long, latitude: java.math.BigDecimal, longitude: java.math.BigDecimal): Int =
+        jdbc.update(
+            "UPDATE listings SET latitude = :lat, longitude = :lng, geocoded_at = now(), updated_at = now() WHERE id = :id",
+            MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("lat", latitude)
+                .addValue("lng", longitude),
+        )
+
+    fun findIdsAndAddressesWithoutGeo(limit: Int = 200): List<Pair<Long, String>> =
+        jdbc.query(
+            "SELECT id, address FROM listings WHERE geocoded_at IS NULL AND address IS NOT NULL ORDER BY id LIMIT :limit",
+            MapSqlParameterSource("limit", limit),
+        ) { rs, _ -> rs.getLong("id") to rs.getString("address") }
 
     private fun replaceUnits(listingId: Long, units: List<RawListingUnit>) {
         jdbc.update(

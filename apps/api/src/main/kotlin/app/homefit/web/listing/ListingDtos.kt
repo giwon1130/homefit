@@ -19,6 +19,8 @@ data class ListingSummaryResponse(
     val sido: String?,
     val sigungu: String?,
     val address: String?,
+    val latitude: BigDecimal?,
+    val longitude: BigDecimal?,
     val developer: String?,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
@@ -30,7 +32,8 @@ data class ListingSummaryResponse(
     companion object {
         fun from(l: Listing) = ListingSummaryResponse(
             id = l.id, name = l.name, listingType = l.listingType,
-            sido = l.sido, sigungu = l.sigungu, address = l.address, developer = l.developer,
+            sido = l.sido, sigungu = l.sigungu, address = l.address,
+            latitude = l.latitude, longitude = l.longitude, developer = l.developer,
             applicationStart = l.applicationStart, applicationEnd = l.applicationEnd,
             announcementDate = l.announcementDate, moveInDate = l.moveInDate,
             totalSupply = l.totalSupply, documentUrl = l.rawDocumentUrl,
@@ -72,6 +75,8 @@ data class ListingDetailResponse(
     val sido: String?,
     val sigungu: String?,
     val address: String?,
+    val latitude: BigDecimal?,
+    val longitude: BigDecimal?,
     val developer: String?,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
@@ -88,6 +93,7 @@ data class ListingDetailResponse(
         fun from(d: ListingDetail) = ListingDetailResponse(
             id = d.listing.id, name = d.listing.name, listingType = d.listing.listingType,
             sido = d.listing.sido, sigungu = d.listing.sigungu, address = d.listing.address,
+            latitude = d.listing.latitude, longitude = d.listing.longitude,
             developer = d.listing.developer,
             applicationStart = d.listing.applicationStart, applicationEnd = d.listing.applicationEnd,
             announcementDate = d.listing.announcementDate,

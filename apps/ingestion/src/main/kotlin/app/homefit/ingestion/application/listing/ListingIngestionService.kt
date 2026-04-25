@@ -2,6 +2,8 @@ package app.homefit.ingestion.application.listing
 
 import app.homefit.ingestion.config.PublicDataProperties
 import app.homefit.ingestion.domain.listing.ListingSource
+import app.homefit.ingestion.domain.listing.RawListing
+import app.homefit.ingestion.infrastructure.kakao.KakaoLocalClient
 import app.homefit.ingestion.infrastructure.persistence.IngestionRunRepository
 import app.homefit.ingestion.infrastructure.persistence.ListingRepository
 import app.homefit.ingestion.infrastructure.publicdata.ApplyhomeMapper
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service
 import java.time.LocalDate
 
 data class IngestionResult(val pages: Int, val upserted: Int)
+data class GeocodeResult(val attempted: Int, val succeeded: Int)
 
 @Service
 class ListingIngestionService(
@@ -20,14 +23,15 @@ class ListingIngestionService(
     private val listings: ListingRepository,
     private val runs: IngestionRunRepository,
     private val props: PublicDataProperties,
+    private val kakao: KakaoLocalClient,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * 공공데이터포털 청약홈 APT 분양정보를 모집공고일 기준 최근 N일만 가져와 upsert.
      *
-     * 주택형별(getAPTLttotPblancMdl) 응답도 같은 범위로 미리 다 받아 HOUSE_MANAGE_NO 로 매칭.
-     * 페이지 수가 수십 페이지 이하인 도메인이라 메모리 보관 수용 가능.
+     * 주택형별(getAPTLttotPblancMdl) 응답은 HOUSE_MANAGE_NO 로 공고 단위 별도 조회 (Mdl 엔드포인트는 날짜 필터 미지원).
+     * 새 공고가 들어오면 카카오 Local API 로 좌표를 1회 채움. 실패해도 listing 자체는 저장.
      */
     fun syncApt(lookbackDays: Long = props.lookbackDays): IngestionResult {
         val runId = runs.start(ListingSource.PUBLIC_DATA_APT.code)
@@ -43,8 +47,9 @@ class ListingIngestionService(
                 for (item in resp.data) {
                     val key = item.houseManageNo ?: item.pblancNo ?: continue
                     val models = fetchModelsForListing(key)
-                    val raw = mapper.toRawListing(item, models) ?: continue
-                    listings.upsert(raw)
+                    val rawBase = mapper.toRawListing(item, models) ?: continue
+                    val withGeo = enrichWithCoordinates(rawBase)
+                    listings.upsert(withGeo)
                     upserted++
                 }
                 if (resp.data.size < resp.perPage) break
@@ -58,6 +63,25 @@ class ListingIngestionService(
             runs.fail(runId, e.toString())
             throw e
         }
+    }
+
+    /** 주소 → 좌표 1회 호출. 실패해도 listing 자체는 저장. */
+    private fun enrichWithCoordinates(raw: RawListing): RawListing =
+        raw.address?.let { kakao.geocode(it) }?.let {
+            raw.copy(latitude = it.latitude, longitude = it.longitude)
+        } ?: raw
+
+    /** 기존에 좌표 없는 listing 들 백필. 한 번 호출에 limit 건만 처리 (rate 보호). */
+    fun backfillCoordinates(limit: Int = 50): GeocodeResult {
+        val pending = listings.findIdsAndAddressesWithoutGeo(limit)
+        var success = 0
+        for ((id, address) in pending) {
+            val coords = kakao.geocode(address) ?: continue
+            listings.updateCoordinates(id, coords.latitude, coords.longitude)
+            success++
+        }
+        log.info("geocode backfill attempted={} succeeded={}", pending.size, success)
+        return GeocodeResult(pending.size, success)
     }
 
     /**

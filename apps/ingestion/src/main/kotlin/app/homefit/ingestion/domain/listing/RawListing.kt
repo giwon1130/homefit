@@ -15,6 +15,8 @@ data class RawListing(
     val sido: String?,
     val sigungu: String?,
     val address: String?,
+    val latitude: java.math.BigDecimal? = null,
+    val longitude: java.math.BigDecimal? = null,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
     val announcementDate: LocalDate?,
