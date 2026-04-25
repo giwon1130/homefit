@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, type EligibilityResp, type ListingDetail } from "@/lib/api";
 import { auth } from "@/auth";
+import FavoriteButton from "@/components/FavoriteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -67,12 +68,20 @@ export default async function ListingDetailPage({ params }: Props) {
   }
   const listing: ListingDetail = await res.json();
 
-  // Only fetch eligibility if logged in.
+  // Only fetch eligibility + favorite state if logged in.
   const session = await auth();
   let eligibility: EligibilityResp | null = null;
+  let isFavorited = false;
   if (session?.accessToken) {
-    const er = await apiFetch(`/api/v1/listings/${id}/eligibility`);
+    const [er, fr] = await Promise.all([
+      apiFetch(`/api/v1/listings/${id}/eligibility`),
+      apiFetch("/api/v1/favorites"),
+    ]);
     if (er.ok) eligibility = await er.json();
+    if (fr.ok) {
+      const list = (await fr.json()) as { id: number }[];
+      isFavorited = list.some((x) => x.id === Number(id));
+    }
   }
 
   return (
@@ -94,7 +103,14 @@ export default async function ListingDetailPage({ params }: Props) {
             </span>
           )}
         </div>
-        <h1 className="text-2xl font-bold">{listing.name}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-bold">{listing.name}</h1>
+          <FavoriteButton
+            listingId={listing.id}
+            initialFavorited={isFavorited}
+            authed={!!session?.accessToken}
+          />
+        </div>
         <p className="text-sm text-zinc-500">{listing.address}</p>
         {listing.developer && (
           <p className="text-sm text-zinc-500">시행/시공: {listing.developer}</p>
