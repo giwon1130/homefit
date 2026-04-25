@@ -55,13 +55,17 @@ export default function ListingMap({
   selectedId,
   workplaces,
   polygons,
+  onPointHover,
+  onPointClick,
 }: {
   points: MapPoint[];
   className?: string;
-  selectedId?: number;
+  selectedId?: number | null;
   workplaces?: Array<{ lat: number; lng: number; label: string }>;
   /** 청약 단지 폴리곤. 있으면 원형 마커 대신 폴리곤 우선 표시. */
   polygons?: Array<{ id: number; geojson: FeatureCollection; color?: string }>;
+  onPointHover?: (id: number | null) => void;
+  onPointClick?: (id: number) => void;
 }) {
   const validPoints = useMemo(
     () => points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
@@ -102,54 +106,67 @@ export default function ListingMap({
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds points={validPoints} workplaces={validWorkplaces} />
-        {(polygons ?? []).map((poly) => (
-          <GeoJSON
-            key={`poly-${poly.id}`}
-            data={poly.geojson}
-            style={{
-              color: poly.color ?? "#dc2626",
-              weight: 2,
-              fillColor: poly.color ?? "#dc2626",
-              fillOpacity: 0.25,
-            }}
-          />
-        ))}
+        {(polygons ?? []).map((poly) => {
+          const isHi = poly.id === selectedId;
+          return (
+            <GeoJSON
+              key={`poly-${poly.id}-${isHi ? "hi" : "lo"}`}
+              data={poly.geojson}
+              style={{
+                color: poly.color ?? "#dc2626",
+                weight: isHi ? 3 : 2,
+                fillColor: poly.color ?? "#dc2626",
+                fillOpacity: isHi ? 0.5 : 0.2,
+              }}
+              eventHandlers={{
+                mouseover: () => onPointHover?.(poly.id),
+                mouseout: () => onPointHover?.(null),
+                click: () => onPointClick?.(poly.id),
+              }}
+            />
+          );
+        })}
         {validPoints
           .filter((p) => !(polygons ?? []).some((g) => g.id === p.id))
           .map((p) => {
-          const isHi = p.id === selectedId || p.highlight;
-          const c = colorForScore(p.score);
-          return (
-            <Circle
-              key={`l-${p.id}`}
-              center={[p.lat, p.lng]}
-              radius={radiusFor(p.totalSupply)}
-              pathOptions={{
-                fillColor: c.fill,
-                color: c.stroke,
-                fillOpacity: isHi ? 0.55 : 0.35,
-                weight: isHi ? 3 : 1.5,
-              }}
-            >
-              <Popup>
-                <div className="space-y-1">
-                  <strong>{p.title}</strong>
-                  {p.subtitle && <div className="text-xs text-zinc-500">{p.subtitle}</div>}
-                  {p.score != null && (
-                    <div className="text-xs">
-                      매칭 점수: <span className="font-semibold">{p.score}</span> / 100
-                    </div>
-                  )}
-                  {p.href && (
-                    <a href={p.href} className="text-xs text-blue-600 hover:underline">
-                      상세 보기 →
-                    </a>
-                  )}
-                </div>
-              </Popup>
-            </Circle>
-          );
-        })}
+            const isHi = p.id === selectedId || p.highlight;
+            const c = colorForScore(p.score);
+            return (
+              <Circle
+                key={`l-${p.id}`}
+                center={[p.lat, p.lng]}
+                radius={radiusFor(p.totalSupply)}
+                pathOptions={{
+                  fillColor: c.fill,
+                  color: c.stroke,
+                  fillOpacity: isHi ? 0.6 : 0.35,
+                  weight: isHi ? 3 : 1.5,
+                }}
+                eventHandlers={{
+                  mouseover: () => onPointHover?.(p.id),
+                  mouseout: () => onPointHover?.(null),
+                  click: () => onPointClick?.(p.id),
+                }}
+              >
+                <Popup>
+                  <div className="space-y-1">
+                    <strong>{p.title}</strong>
+                    {p.subtitle && <div className="text-xs text-zinc-500">{p.subtitle}</div>}
+                    {p.score != null && (
+                      <div className="text-xs">
+                        매칭 점수: <span className="font-semibold">{p.score}</span> / 100
+                      </div>
+                    )}
+                    {p.href && (
+                      <a href={p.href} className="text-xs text-blue-600 hover:underline">
+                        상세 보기 →
+                      </a>
+                    )}
+                  </div>
+                </Popup>
+              </Circle>
+            );
+          })}
         {validWorkplaces.map((w, i) => (
           <Marker key={`w-${i}`} position={[w.lat, w.lng]} icon={workplaceIcon}>
             <Popup>
