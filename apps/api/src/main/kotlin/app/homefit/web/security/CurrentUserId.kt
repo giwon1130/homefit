@@ -14,9 +14,12 @@ annotation class CurrentUserId
 
 @Component
 class CurrentUserIdArgumentResolver : HandlerMethodArgumentResolver {
-    override fun supportsParameter(parameter: MethodParameter): Boolean =
-        parameter.hasParameterAnnotation(CurrentUserId::class.java) &&
-            parameter.parameterType == java.lang.Long::class.java
+    override fun supportsParameter(parameter: MethodParameter): Boolean {
+        if (!parameter.hasParameterAnnotation(CurrentUserId::class.java)) return false
+        val type = parameter.parameterType
+        // Kotlin `Long` (non-nullable) → JVM primitive long; nullable Long → boxed java.lang.Long.
+        return type == java.lang.Long::class.java || type == Long::class.javaPrimitiveType
+    }
 
     override fun resolveArgument(
         parameter: MethodParameter,
