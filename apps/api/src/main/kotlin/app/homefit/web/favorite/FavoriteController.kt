@@ -1,7 +1,7 @@
 package app.homefit.web.favorite
 
-import app.homefit.application.listing.ListingQueryService
 import app.homefit.domain.favorite.FavoriteRepository
+import app.homefit.domain.listing.ListingQueryRepository
 import app.homefit.web.listing.ListingSummaryResponse
 import app.homefit.web.security.CurrentUserId
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -15,14 +15,15 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/favorites")
 class FavoriteController(
     private val favorites: FavoriteRepository,
-    private val listings: ListingQueryService,
+    private val listings: ListingQueryRepository,
 ) {
     @GetMapping
     fun list(@CurrentUserId userId: Long): List<ListingSummaryResponse> {
         val ids = favorites.listIds(userId)
-        return ids.mapNotNull { id ->
-            listings.findDetail(id)?.listing?.let { ListingSummaryResponse.from(it) }
-        }
+        if (ids.isEmpty()) return emptyList()
+        // 단일 IN 쿼리로 한 번에 가져온 뒤 favorites 순서(생성 역순)대로 정렬 — N+1 제거
+        val byId = listings.findByIds(ids).associateBy { it.id }
+        return ids.mapNotNull { byId[it] }.map { ListingSummaryResponse.from(it) }
     }
 
     @PutMapping("/{listingId}")

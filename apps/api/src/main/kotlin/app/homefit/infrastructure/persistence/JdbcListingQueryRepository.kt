@@ -101,6 +101,18 @@ class JdbcListingQueryRepository(
         return ListingPage(content, query.page, query.size, total)
     }
 
+    override fun findByIds(ids: Collection<Long>): List<Listing> {
+        if (ids.isEmpty()) return emptyList()
+        val sql = """
+            SELECT id, source, source_ref, listing_type, name, developer,
+                   sido, sigungu, address, latitude, longitude, polygon_geojson::text AS polygon_geojson,
+                   application_start, application_end, announcement_date, winner_announcement_date,
+                   contract_start_date, contract_end_date, move_in_date, total_supply, raw_document_url
+            FROM listings WHERE id IN (:ids)
+        """.trimIndent()
+        return jdbc.query(sql, MapSqlParameterSource("ids", ids), listingMapper)
+    }
+
     override fun findUnitsByListingIds(ids: Collection<Long>): Map<Long, List<ListingUnit>> {
         if (ids.isEmpty()) return emptyMap()
         val rows = jdbc.query(
