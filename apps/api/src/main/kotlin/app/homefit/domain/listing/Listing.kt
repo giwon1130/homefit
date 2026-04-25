@@ -14,6 +14,8 @@ data class Listing(
     val sido: String?,
     val sigungu: String?,
     val address: String?,
+    val latitude: BigDecimal?,
+    val longitude: BigDecimal?,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
     val announcementDate: LocalDate?,

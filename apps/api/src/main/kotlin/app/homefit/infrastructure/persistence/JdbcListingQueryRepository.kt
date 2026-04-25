@@ -30,6 +30,8 @@ class JdbcListingQueryRepository(
             sido = rs.getString("sido"),
             sigungu = rs.getString("sigungu"),
             address = rs.getString("address"),
+            latitude = rs.getBigDecimal("latitude"),
+            longitude = rs.getBigDecimal("longitude"),
             applicationStart = rs.getObject("application_start", OffsetDateTime::class.java),
             applicationEnd = rs.getObject("application_end", OffsetDateTime::class.java),
             announcementDate = rs.getDate("announcement_date")?.toLocalDate(),
@@ -85,7 +87,7 @@ class JdbcListingQueryRepository(
         params.addValue("limit", query.size).addValue("offset", query.page * query.size)
         val dataSql = """
             SELECT id, source, source_ref, listing_type, name, developer,
-                   sido, sigungu, address,
+                   sido, sigungu, address, latitude, longitude,
                    application_start, application_end, announcement_date, winner_announcement_date,
                    contract_start_date, contract_end_date, move_in_date, total_supply, raw_document_url
             FROM listings
@@ -112,7 +114,7 @@ class JdbcListingQueryRepository(
         val listing = jdbc.query(
             """
             SELECT id, source, source_ref, listing_type, name, developer,
-                   sido, sigungu, address,
+                   sido, sigungu, address, latitude, longitude,
                    application_start, application_end, announcement_date, winner_announcement_date,
                    contract_start_date, contract_end_date, move_in_date, total_supply, raw_document_url
             FROM listings WHERE id = :id

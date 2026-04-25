@@ -22,10 +22,22 @@ class IngestionAdminController(
 ) {
     @PostMapping("/run")
     fun runApt(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
-        if (token != props.adminToken) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-        }
+        require(token)
         val result = service.syncApt()
         return mapOf("pages" to result.pages, "upserted" to result.upserted)
+    }
+
+    @PostMapping("/geocode-backfill")
+    fun geocodeBackfill(
+        @RequestHeader("X-Admin-Token") token: String,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue = "50") limit: Int,
+    ): Map<String, Any> {
+        require(token)
+        val result = service.backfillCoordinates(limit.coerceIn(1, 500))
+        return mapOf("attempted" to result.attempted, "succeeded" to result.succeeded)
+    }
+
+    private fun require(token: String) {
+        if (token != props.adminToken) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
     }
 }
