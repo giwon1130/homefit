@@ -16,6 +16,8 @@ data class Listing(
     val address: String?,
     val latitude: BigDecimal?,
     val longitude: BigDecimal?,
+    /** VWorld 연속지적도 GeoJSON FeatureCollection. raw JSON string. */
+    val polygonGeoJson: String? = null,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
     val announcementDate: LocalDate?,

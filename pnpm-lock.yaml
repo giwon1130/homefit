@@ -124,6 +124,9 @@ importers:
         specifier: ^5.0.1
         version: 5.0.12(@types/react@18.3.28)(react@19.0.0-rc-66855b96-20241106)(use-sync-external-store@1.6.0(react@19.0.0-rc-66855b96-20241106))
     devDependencies:
+      '@types/geojson':
+        specifier: ^7946.0.14
+        version: 7946.0.16
       '@types/leaflet':
         specifier: ^1.9.14
         version: 1.9.21

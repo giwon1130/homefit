@@ -77,6 +77,7 @@ data class ListingDetailResponse(
     val address: String?,
     val latitude: BigDecimal?,
     val longitude: BigDecimal?,
+    val polygonGeoJson: Any?,
     val developer: String?,
     val applicationStart: OffsetDateTime?,
     val applicationEnd: OffsetDateTime?,
@@ -90,10 +91,14 @@ data class ListingDetailResponse(
     val units: List<UnitResponse>,
 ) {
     companion object {
+        private val mapper = com.fasterxml.jackson.databind.ObjectMapper()
         fun from(d: ListingDetail) = ListingDetailResponse(
             id = d.listing.id, name = d.listing.name, listingType = d.listing.listingType,
             sido = d.listing.sido, sigungu = d.listing.sigungu, address = d.listing.address,
             latitude = d.listing.latitude, longitude = d.listing.longitude,
+            polygonGeoJson = d.listing.polygonGeoJson?.let {
+                runCatching { mapper.readValue(it, Any::class.java) }.getOrNull()
+            },
             developer = d.listing.developer,
             applicationStart = d.listing.applicationStart, applicationEnd = d.listing.applicationEnd,
             announcementDate = d.listing.announcementDate,

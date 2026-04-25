@@ -65,6 +65,7 @@ export interface ListingDetail extends ListingSummary {
   contractStartDate?: string;
   contractEndDate?: string;
   units: UnitResp[];
+  polygonGeoJson?: GeoJSON.FeatureCollection | null;
 }
 
 export type SupplyType = "GENERAL" | "FIRST_TIME" | "NEWLYWED" | "MULTI_CHILD";

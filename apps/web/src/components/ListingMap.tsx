@@ -3,7 +3,8 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
-import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { Circle, GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import type { FeatureCollection } from "geojson";
 
 // 직장 마커용 div 아이콘
 const workplaceIcon = L.divIcon({
@@ -53,11 +54,14 @@ export default function ListingMap({
   className,
   selectedId,
   workplaces,
+  polygons,
 }: {
   points: MapPoint[];
   className?: string;
   selectedId?: number;
   workplaces?: Array<{ lat: number; lng: number; label: string }>;
+  /** 청약 단지 폴리곤. 있으면 원형 마커 대신 폴리곤 우선 표시. */
+  polygons?: Array<{ id: number; geojson: FeatureCollection; color?: string }>;
 }) {
   const validPoints = useMemo(
     () => points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
@@ -98,7 +102,21 @@ export default function ListingMap({
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds points={validPoints} workplaces={validWorkplaces} />
-        {validPoints.map((p) => {
+        {(polygons ?? []).map((poly) => (
+          <GeoJSON
+            key={`poly-${poly.id}`}
+            data={poly.geojson}
+            style={{
+              color: poly.color ?? "#dc2626",
+              weight: 2,
+              fillColor: poly.color ?? "#dc2626",
+              fillOpacity: 0.25,
+            }}
+          />
+        ))}
+        {validPoints
+          .filter((p) => !(polygons ?? []).some((g) => g.id === p.id))
+          .map((p) => {
           const isHi = p.id === selectedId || p.highlight;
           const c = colorForScore(p.score);
           return (

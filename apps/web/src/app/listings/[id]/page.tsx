@@ -132,7 +132,12 @@ export default async function ListingDetailPage({ params }: Props) {
                 highlight: true,
               },
             ]}
-            className="h-[320px]"
+            polygons={
+              listing.polygonGeoJson
+                ? [{ id: listing.id, geojson: listing.polygonGeoJson, color: "#dc2626" }]
+                : undefined
+            }
+            className="h-[360px]"
           />
         </section>
       )}
