@@ -33,6 +33,8 @@ export interface ListingSummary {
   sido?: string;
   sigungu?: string;
   address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   developer?: string;
   applicationStart?: string;
   applicationEnd?: string;
