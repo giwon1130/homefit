@@ -2,12 +2,15 @@ package app.homefit.ingestion.web
 
 import app.homefit.ingestion.application.listing.ListingIngestionService
 import app.homefit.ingestion.config.IngestionProperties
+import app.homefit.ingestion.infrastructure.persistence.ListingRepository
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
+import java.math.BigDecimal
 
 /**
  * 내부 관리용 엔드포인트. X-Admin-Token 헤더로 보호.
@@ -19,7 +22,10 @@ import org.springframework.web.server.ResponseStatusException
 class IngestionAdminController(
     private val service: ListingIngestionService,
     private val props: IngestionProperties,
+    private val listings: ListingRepository,
 ) {
+    data class CoordEntry(val id: Long, val latitude: BigDecimal, val longitude: BigDecimal)
+    data class BulkCoordRequest(val items: List<CoordEntry>)
     @PostMapping("/run")
     fun runApt(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
         require(token)
@@ -35,6 +41,24 @@ class IngestionAdminController(
         require(token)
         val result = service.backfillCoordinates(limit.coerceIn(1, 500))
         return mapOf("attempted" to result.attempted, "succeeded" to result.succeeded)
+    }
+
+    /**
+     * 외부에서 미리 지오코딩한 좌표 일괄 업데이트. Railway → VWorld 연결이 막혀있어
+     * 로컬에서 지오코딩 후 푸시하는 우회 경로용.
+     */
+    @PostMapping("/coordinates")
+    fun bulkUpdateCoordinates(
+        @RequestHeader("X-Admin-Token") token: String,
+        @RequestBody body: BulkCoordRequest,
+    ): Map<String, Any> {
+        require(token)
+        var updated = 0
+        for (entry in body.items) {
+            val n = listings.updateCoordinates(entry.id, entry.latitude, entry.longitude)
+            updated += n
+        }
+        return mapOf("received" to body.items.size, "updated" to updated)
     }
 
     private fun require(token: String) {
