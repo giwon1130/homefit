@@ -16,7 +16,23 @@ INGEST="${INGEST_BASE_URL:-https://ingestion-production-fd56.up.railway.app}"
 : "${INGESTION_ADMIN_TOKEN:?INGESTION_ADMIN_TOKEN required}"
 
 clean_addr() {
-  echo "$1" | sed -E 's/[[:space:]]+(일원|일대|외)$//' | sed -E 's/\([^)]*\)//g' | tr -s ' '
+  local input="$1"
+  # 괄호 안에 '번지' 또는 '일원' 있으면 그게 진짜 주소 (예: "AA36BL(서구 불로동 589번지 일원)")
+  local inside
+  inside=$(echo "$input" | grep -oE '\([^)]*(번지|일원|동 [0-9])[^)]*\)' | head -1 | sed -E 's/^\(//' | sed -E 's/\)$//')
+  if [ -n "$inside" ]; then
+    echo "$inside" | sed -E 's/[[:space:]]+(일원|일대|외)$//' | tr -s ' '
+    return
+  fi
+  # 괄호 제거 + 트레일 BL/블록/단지/도시개발구역 등 제거
+  echo "$input" \
+    | sed -E 's/\([^)]*\)//g' \
+    | sed -E 's/,[^,]*$//' \
+    | sed -E 's/[[:space:]]+(일원|일대|외)//g' \
+    | sed -E 's/[[:space:]]+[A-Z]+-?[0-9]+(BL|블록|단지)?$//' \
+    | sed -E 's/[[:space:]]+[0-9]+(BL|블록|단지)$//' \
+    | sed -E 's/[[:space:]]+[가-힣]+(택지개발지구|공공주택지구|도시개발구역|구역|에코델타시티|역세권도시개발사업|국제화계획지구).*$//' \
+    | tr -s ' '
 }
 
 geocode_one() {
