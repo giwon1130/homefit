@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { apiFetch, type FullProfile, type MatchedListingPage } from "@/lib/api";
 import { isProfileEmpty } from "@/lib/profile";
+import ListingMap, { type MapPoint } from "@/components/ListingMap";
 
 export const dynamic = "force-dynamic";
 
@@ -60,11 +61,32 @@ export default async function MatchPage() {
   const profile: FullProfile | null = profileRes.ok ? await profileRes.json() : null;
   const profileEmpty = profile ? isProfileEmpty(profile) : false;
 
+  // 지도용 포인트
+  const points: MapPoint[] = page.content
+    .filter((m) => m.listing.latitude != null && m.listing.longitude != null)
+    .map(({ listing: l, score }) => ({
+      id: l.id,
+      lat: l.latitude as number,
+      lng: l.longitude as number,
+      title: l.name,
+      subtitle: `${l.sido ?? ""} ${l.sigungu ?? ""} · 점수 ${score.total}/${score.max}`,
+      href: `/listings/${l.id}`,
+    }));
+
+  const workplaces =
+    profile?.workplaces
+      .filter((w) => w.latitude != null && w.longitude != null)
+      .map((w) => ({
+        lat: Number(w.latitude),
+        lng: Number(w.longitude),
+        label: w.label || (w.owner === "SELF" ? "본인 직장" : "배우자 직장"),
+      })) ?? [];
+
   return (
-    <div className="space-y-4">
-      <header className="flex items-end justify-between">
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">내 맞춤 청약</h1>
+          <h1 className="text-2xl font-bold tracking-tight">내 맞춤 청약</h1>
           <p className="mt-1 text-sm text-zinc-500">
             자격(25) + 예산(25) + 지역(20) + 통근(30) 조합 점수 순.
           </p>
@@ -89,57 +111,81 @@ export default async function MatchPage() {
         </div>
       )}
 
-      {page.content.length === 0 ? (
-        <div className="rounded border border-zinc-200 bg-white p-8 text-center text-zinc-500">
-          매칭되는 청약이 없습니다. <Link href="/profile" className="text-blue-600 hover:underline">프로필</Link>을 채워보세요.
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {page.content.map(({ listing: l, score }) => (
-            <li key={l.id}>
-              <Link
-                href={`/listings/${l.id}`}
-                className="block rounded-lg border border-zinc-200 bg-white p-4 hover:border-blue-400 hover:shadow-sm"
-              >
-                <div className="flex items-start gap-4">
-                  <ScoreBadge total={score.total} max={score.max} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
-                        {LISTING_TYPE_LABEL[l.listingType] ?? l.listingType}
-                      </span>
-                      {score.bestSupplyType && (
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
-                          {SUPPLY_TYPE_LABEL[score.bestSupplyType]}
-                        </span>
-                      )}
-                      {l.sido && (
-                        <span className="text-zinc-500">
-                          {l.sido} {l.sigungu}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="mt-1 font-semibold">{l.name}</h2>
-                    <div className="mt-1 grid grid-cols-4 gap-2 text-xs text-zinc-500">
-                      <Bar label="자격" v={score.eligibility} max={25} />
-                      <Bar label="예산" v={score.budget} max={25} />
-                      <Bar label="지역" v={score.region} max={20} />
-                      <Bar
-                        label={score.commuteMinutes != null ? `통근 ${score.commuteMinutes}분` : "통근"}
-                        v={score.commute}
-                        max={30}
-                      />
-                    </div>
-                    <div className="mt-2 text-xs text-zinc-500">
-                      접수 {formatDate(l.applicationStart)} ~ {formatDate(l.applicationEnd)} ({daysUntil(l.applicationEnd)})
-                    </div>
-                  </div>
-                </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
+        <div>
+          {page.content.length === 0 ? (
+            <div className="rounded border border-zinc-200 bg-white p-8 text-center text-zinc-500">
+              매칭되는 청약이 없습니다.{" "}
+              <Link href="/profile" className="text-blue-600 hover:underline">
+                프로필
               </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+              을 채워보세요.
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {page.content.map(({ listing: l, score }) => (
+                <li key={l.id}>
+                  <Link
+                    href={`/listings/${l.id}`}
+                    className="block rounded-lg border border-zinc-200 bg-white p-4 hover:border-blue-400 hover:shadow-sm"
+                  >
+                    <div className="flex items-start gap-4">
+                      <ScoreBadge total={score.total} max={score.max} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+                            {LISTING_TYPE_LABEL[l.listingType] ?? l.listingType}
+                          </span>
+                          {score.bestSupplyType && (
+                            <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                              {SUPPLY_TYPE_LABEL[score.bestSupplyType]}
+                            </span>
+                          )}
+                          {l.sido && (
+                            <span className="text-zinc-500">
+                              {l.sido} {l.sigungu}
+                            </span>
+                          )}
+                        </div>
+                        <h2 className="mt-1 font-semibold">{l.name}</h2>
+                        <div className="mt-1 grid grid-cols-2 gap-2 text-xs text-zinc-500 sm:grid-cols-4">
+                          <Bar label="자격" v={score.eligibility} max={25} />
+                          <Bar label="예산" v={score.budget} max={25} />
+                          <Bar label="지역" v={score.region} max={20} />
+                          <Bar
+                            label={
+                              score.commuteMinutes != null
+                                ? `통근 ${score.commuteMinutes}분`
+                                : "통근"
+                            }
+                            v={score.commute}
+                            max={30}
+                          />
+                        </div>
+                        <div className="mt-2 text-xs text-zinc-500">
+                          접수 {formatDate(l.applicationStart)} ~ {formatDate(l.applicationEnd)} (
+                          {daysUntil(l.applicationEnd)})
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <aside className="lg:sticky lg:top-6 lg:h-[calc(100vh-7rem)]">
+          <ListingMap
+            points={points}
+            workplaces={workplaces}
+            className="h-[400px] lg:h-full"
+          />
+          <p className="mt-2 text-xs text-zinc-500">
+            🔴 빨간 점이 청약 단지, 🏢 초록은 직장. 마커 클릭으로 정보를 볼 수 있어요.
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -148,7 +194,9 @@ function ScoreBadge({ total, max }: { total: number; max: number }) {
   const ratio = max ? total / max : 0;
   const color = ratio >= 0.7 ? "bg-emerald-600" : ratio >= 0.4 ? "bg-blue-600" : "bg-zinc-400";
   return (
-    <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full text-white ${color}`}>
+    <div
+      className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full text-white ${color}`}
+    >
       <div className="text-lg font-bold leading-none">{total}</div>
       <div className="text-[10px] opacity-80">/ {max}</div>
     </div>
