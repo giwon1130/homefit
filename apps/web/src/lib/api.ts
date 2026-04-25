@@ -104,6 +104,17 @@ export interface HouseholdMember {
   birthDate?: string | null;
 }
 
+export type WorkplaceOwner = "SELF" | "SPOUSE";
+
+export interface Workplace {
+  owner: WorkplaceOwner;
+  label?: string | null;
+  address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  arrivalTime?: string;
+}
+
 export interface FullProfile {
   userId: number;
   core: ProfileCore;
@@ -111,7 +122,7 @@ export interface FullProfile {
   incomes: Array<{ year: number; selfAmount?: number; spouseAmount?: number }>;
   assets: { netWorth?: number; realEstate?: number } | null;
   residences: unknown[];
-  workplaces: unknown[];
+  workplaces: Workplace[];
   preferences: unknown | null;
   housingHistory: unknown[];
 }
