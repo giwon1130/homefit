@@ -33,6 +33,8 @@ homefit:
     admin-token: ${INGESTION_ADMIN_TOKEN:dev-admin-token-change-me}
   kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:}
+  vworld:
+    api-key: ${VWORLD_API_KEY:}
 
 logging:
   level:
