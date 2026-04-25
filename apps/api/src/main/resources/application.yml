@@ -45,6 +45,10 @@ homefit:
   crypto:
     # base64-encoded 32 bytes. Railway AES_ENCRYPTION_KEY env var.
     aes-key-base64: ${AES_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  odsay:
+    api-key: ${ODSAY_API_KEY:}
+    # ODsay 키에 등록된 URI 중 하나. Referer 검증용.
+    referer: ${ODSAY_REFERER:https://homefit.app/}
   eligibility:
     # 도시근로자 월평균소득 (원, 2025 추정치 기준 — 매년 국토부 고시 변경 시 업데이트)
     urban-worker-monthly-income:
