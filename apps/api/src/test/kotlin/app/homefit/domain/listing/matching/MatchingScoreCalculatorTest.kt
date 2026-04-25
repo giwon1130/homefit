@@ -56,12 +56,14 @@ class MatchingScoreCalculatorTest {
             incomes = emptyList(),
             history = emptyList(),
             preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
         )
-        // 빈 프로필 → 생애최초 자격으로 FIRST_TIME 우선 (22점)
-        assertThat(score.eligibility).isEqualTo(22)
-        assertThat(score.budget).isEqualTo(35)
-        assertThat(score.region).isEqualTo(35)
-        assertThat(score.total).isEqualTo(92)
+        // 빈 프로필 → 생애최초 자격으로 FIRST_TIME 우선 (20점)
+        assertThat(score.eligibility).isEqualTo(20)
+        assertThat(score.budget).isEqualTo(25)
+        assertThat(score.region).isEqualTo(20)
+        assertThat(score.commute).isEqualTo(15) // 통근 정보 부족 → 중간점
+        assertThat(score.total).isEqualTo(80)
     }
 
     @Test
@@ -74,27 +76,29 @@ class MatchingScoreCalculatorTest {
             incomes = listOf(Income(2025, 50_000_000L, 30_000_000L)),
             history = emptyList(),
             preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
         )
         assertThat(score.bestSupplyType?.name).isEqualTo("NEWLYWED")
-        assertThat(score.eligibility).isEqualTo(25)
-        assertThat(score.total).isEqualTo(25 + 35 + 35)
+        assertThat(score.eligibility).isEqualTo(22)
     }
 
     @Test
     fun `예산 초과시 점수 감소`() {
         val cheap = calculator.calculate(
             listing = listing("서울특별시"),
-            units = listOf(unit(500_000_000L)),  // 예산 내
+            units = listOf(unit(500_000_000L)),
             core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
             preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
         )
         val over = calculator.calculate(
             listing = listing("서울특별시"),
-            units = listOf(unit(2_000_000_000L)),  // 2배 → 0
+            units = listOf(unit(2_000_000_000L)),
             core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
             preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
         )
-        assertThat(cheap.budget).isEqualTo(35)
+        assertThat(cheap.budget).isEqualTo(25)
         assertThat(over.budget).isEqualTo(0)
     }
 
@@ -105,18 +109,45 @@ class MatchingScoreCalculatorTest {
             units = listOf(unit(500_000_000L)),
             core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
             preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
         )
         assertThat(score.region).isEqualTo(0)
     }
 
     @Test
-    fun `선호지역 미설정시 중간점`() {
+    fun `통근 30분 이내면 만점 30`() {
         val score = calculator.calculate(
-            listing = listing("부산광역시"),
+            listing = listing("서울특별시").copy(latitude = BigDecimal("37.5"), longitude = BigDecimal("127.0")),
             units = listOf(unit(500_000_000L)),
             core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
-            preferences = Preferences(maxPurchasePrice = 1_000_000_000L),
+            preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = listOf(
+                app.homefit.domain.profile.Workplace(
+                    owner = app.homefit.domain.profile.WorkplaceOwner.SELF,
+                    address = "x", latitude = BigDecimal("37.6"), longitude = BigDecimal("127.0"),
+                ),
+            ),
+            commuteLookup = { _, _ -> 25 },  // 25분
         )
-        assertThat(score.region).isEqualTo(17)
+        assertThat(score.commute).isEqualTo(30)
+        assertThat(score.commuteMinutes).isEqualTo(25)
+    }
+
+    @Test
+    fun `통근 90분 초과면 0점`() {
+        val score = calculator.calculate(
+            listing = listing("서울특별시").copy(latitude = BigDecimal("37.5"), longitude = BigDecimal("127.0")),
+            units = listOf(unit(500_000_000L)),
+            core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
+            preferences = Preferences(),
+            workplaces = listOf(
+                app.homefit.domain.profile.Workplace(
+                    owner = app.homefit.domain.profile.WorkplaceOwner.SELF,
+                    address = "x", latitude = BigDecimal("37.0"), longitude = BigDecimal("127.0"),
+                ),
+            ),
+            commuteLookup = { _, _ -> 120 },
+        )
+        assertThat(score.commute).isEqualTo(0)
     }
 }

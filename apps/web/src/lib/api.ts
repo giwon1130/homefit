@@ -122,6 +122,8 @@ export interface MatchingScore {
   eligibility: number;
   budget: number;
   region: number;
+  commute: number;
+  commuteMinutes: number | null;
   bestSupplyType: SupplyType | null;
   notes: string[];
 }

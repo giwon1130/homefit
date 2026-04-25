@@ -1,5 +1,6 @@
 package app.homefit.application.listing
 
+import app.homefit.application.commute.CommuteService
 import app.homefit.domain.listing.Listing
 import app.homefit.domain.listing.ListingQuery
 import app.homefit.domain.listing.ListingQueryRepository
@@ -21,21 +22,20 @@ data class MatchedListingPage(
 )
 
 /**
- * 사용자 프로필 기반으로 청약을 매칭 스코어 순 정렬.
- * v0: 자격 + 예산 + 지역 (통근은 후속 PR).
+ * 사용자 프로필 기반 매칭 스코어 정렬.
+ * 통근 점수는 CommuteService 통해 ODsay 캐시 조회 (없으면 외부 호출).
  *
- * 현재 동작 가정상 활성 청약 수가 수백 건 이하라 한 번에 가져와 인메모리 정렬.
- * 이후 데이터 늘면 매치 결과를 `matches` 테이블에 캐싱.
+ * 활성 청약 < 1000건 가정으로 인메모리 정렬. 후속 PR에서 matches 테이블 캐싱.
  */
 @Service
 class MatchingService(
     private val listings: ListingQueryRepository,
     private val profile: ProfileRepository,
     private val calculator: MatchingScoreCalculator,
+    private val commute: CommuteService,
 ) {
     @Transactional(readOnly = true)
     fun searchMatched(userId: Long, query: ListingQuery): MatchedListingPage {
-        // Phase 2 v0: 한 번에 가져와 인메모리 정렬. 활성 청약 < 1000 건 가정.
         val all = listings.search(query.copy(page = 0, size = MAX_FETCH))
         val unitMap = listings.findUnitsByListingIds(all.content.map { it.id })
 
@@ -44,11 +44,15 @@ class MatchingService(
         val incomes = profile.findIncomes(userId)
         val history = profile.findHousingHistory(userId)
         val prefs = profile.findPreferences(userId) ?: Preferences()
+        val workplaces = profile.findWorkplaces(userId)
+
+        val commuteLookup: (Pair<java.math.BigDecimal, java.math.BigDecimal>, Pair<java.math.BigDecimal, java.math.BigDecimal>) -> Int? =
+            { origin, dest -> commute.get(origin.first, origin.second, dest.first, dest.second)?.totalMinutes }
 
         val scored = all.content.map { l ->
             MatchedListing(
                 listing = l,
-                score = calculator.calculate(l, unitMap[l.id].orEmpty(), core, members, incomes, history, prefs),
+                score = calculator.calculate(l, unitMap[l.id].orEmpty(), core, members, incomes, history, prefs, workplaces, commuteLookup),
             )
         }.sortedByDescending { it.score.total }
 

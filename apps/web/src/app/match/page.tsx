@@ -99,10 +99,15 @@ export default async function MatchPage() {
                       )}
                     </div>
                     <h2 className="mt-1 font-semibold">{l.name}</h2>
-                    <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-zinc-500">
-                      <Bar label="자격" v={score.eligibility} max={30} />
-                      <Bar label="예산" v={score.budget} max={35} />
-                      <Bar label="지역" v={score.region} max={35} />
+                    <div className="mt-1 grid grid-cols-4 gap-2 text-xs text-zinc-500">
+                      <Bar label="자격" v={score.eligibility} max={25} />
+                      <Bar label="예산" v={score.budget} max={25} />
+                      <Bar label="지역" v={score.region} max={20} />
+                      <Bar
+                        label={score.commuteMinutes != null ? `통근 ${score.commuteMinutes}분` : "통근"}
+                        v={score.commute}
+                        max={30}
+                      />
                     </div>
                     <div className="mt-2 text-xs text-zinc-500">
                       접수 {formatDate(l.applicationStart)} ~ {formatDate(l.applicationEnd)} ({daysUntil(l.applicationEnd)})

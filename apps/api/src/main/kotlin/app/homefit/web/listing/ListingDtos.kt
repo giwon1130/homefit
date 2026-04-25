@@ -136,6 +136,8 @@ data class MatchingScoreDto(
     val eligibility: Int,
     val budget: Int,
     val region: Int,
+    val commute: Int,
+    val commuteMinutes: Int?,
     val bestSupplyType: SupplyType?,
     val notes: List<String>,
 ) {
@@ -146,6 +148,8 @@ data class MatchingScoreDto(
             eligibility = s.eligibility,
             budget = s.budget,
             region = s.region,
+            commute = s.commute,
+            commuteMinutes = s.commuteMinutes,
             bestSupplyType = s.bestSupplyType,
             notes = s.notes,
         )
