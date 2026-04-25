@@ -56,5 +56,5 @@ data class ListingQuery(
     val size: Int = 20,
     val sort: Sort = Sort.CLOSING,
 ) {
-    enum class Sort { CLOSING, ANNOUNCEMENT, MOVE_IN }
+    enum class Sort { CLOSING, ANNOUNCEMENT, MOVE_IN, MATCH }
 }

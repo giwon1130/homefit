@@ -2,6 +2,7 @@ package app.homefit.web.listing
 
 import app.homefit.application.listing.EligibilityService
 import app.homefit.application.listing.ListingQueryService
+import app.homefit.application.listing.MatchingService
 import app.homefit.domain.listing.ListingQuery
 import app.homefit.domain.listing.ListingType
 import app.homefit.web.security.CurrentUserId
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException
 class ListingController(
     private val service: ListingQueryService,
     private val eligibility: EligibilityService,
+    private val matching: MatchingService,
 ) {
     @GetMapping
     fun list(
@@ -52,5 +54,27 @@ class ListingController(
         val result = eligibility.evaluate(userId, id)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         return EligibilityResponse.from(result)
+    }
+
+    @GetMapping("/match")
+    fun match(
+        @CurrentUserId userId: Long,
+        @RequestParam(required = false) sido: String?,
+        @RequestParam(required = false) sigungu: String?,
+        @RequestParam(required = false) type: List<ListingType>?,
+        @RequestParam(defaultValue = "true") activeOnly: Boolean,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): MatchedListingPageResponse {
+        val q = ListingQuery(
+            sido = sido?.takeIf { it.isNotBlank() },
+            sigungu = sigungu?.takeIf { it.isNotBlank() },
+            types = type.orEmpty(),
+            activeOnly = activeOnly,
+            page = page.coerceAtLeast(0),
+            size = size.coerceIn(1, 100),
+            sort = ListingQuery.Sort.MATCH,
+        )
+        return MatchedListingPageResponse.from(matching.searchMatched(userId, q))
     }
 }
