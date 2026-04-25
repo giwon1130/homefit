@@ -10,11 +10,10 @@ export default async function LoginPage({ searchParams }: Props) {
   const session = await auth();
   if (session?.accessToken) {
     const { callbackUrl } = await searchParams;
-    // open-redirect 방어: 사이트 내부 경로만 허용
     const safe =
       callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
         ? callbackUrl
-        : "/match";
+        : "/onboarding";
     redirect(safe);
   }
   return <LoginContent />;

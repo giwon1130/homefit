@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { apiFetch, type MatchedListingPage } from "@/lib/api";
+import { apiFetch, type FullProfile, type MatchedListingPage } from "@/lib/api";
+import { isProfileEmpty } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -44,15 +45,20 @@ export default async function MatchPage() {
   const session = await auth();
   if (!session?.accessToken) redirect("/login");
 
-  const res = await apiFetch("/api/v1/listings/match?size=20");
-  if (!res.ok) {
+  const [matchRes, profileRes] = await Promise.all([
+    apiFetch("/api/v1/listings/match?size=20"),
+    apiFetch("/api/v1/profile"),
+  ]);
+  if (!matchRes.ok) {
     return (
       <div className="rounded border border-red-200 bg-red-50 p-4 text-red-700">
-        매칭 결과를 불러오지 못했습니다 (HTTP {res.status}).
+        매칭 결과를 불러오지 못했습니다 (HTTP {matchRes.status}).
       </div>
     );
   }
-  const page: MatchedListingPage = await res.json();
+  const page: MatchedListingPage = await matchRes.json();
+  const profile: FullProfile | null = profileRes.ok ? await profileRes.json() : null;
+  const profileEmpty = profile ? isProfileEmpty(profile) : false;
 
   return (
     <div className="space-y-4">
@@ -60,13 +66,28 @@ export default async function MatchPage() {
         <div>
           <h1 className="text-2xl font-bold">내 맞춤 청약</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            자격(30) + 예산(35) + 지역(35) 조합 점수 순. 통근 점수는 추후 추가.
+            자격(25) + 예산(25) + 지역(20) + 통근(30) 조합 점수 순.
           </p>
         </div>
         <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">
           전체 목록 →
         </Link>
       </header>
+
+      {profileEmpty && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+          <strong className="text-amber-900">⚠ 프로필 미입력</strong>
+          <p className="mt-1 text-amber-800">
+            자격 / 예산 / 통근 점수는 프로필 정보가 있어야 정확합니다. 지금은 기본값으로 매칭 중이에요.
+          </p>
+          <Link
+            href="/onboarding"
+            className="mt-2 inline-block rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
+          >
+            프로필 채우기 →
+          </Link>
+        </div>
+      )}
 
       {page.content.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-white p-8 text-center text-zinc-500">

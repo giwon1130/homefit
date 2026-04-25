@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type {
   HouseholdMember,
   HouseholdRelation,
@@ -8,6 +10,7 @@ import type {
   Workplace,
   WorkplaceOwner,
 } from "@/lib/api";
+import AddressSearch from "@/components/AddressSearch";
 import { saveProfile } from "./actions";
 
 const RELATION_LABEL: Record<HouseholdRelation, string> = {
@@ -78,10 +81,16 @@ export default function ProfileForm({
   initialCore,
   initialMembers,
   initialWorkplaces,
+  onSavedRedirectTo,
+  showSkipLink,
+  saveLabel = "저장",
 }: {
   initialCore: ProfileCore;
   initialMembers: HouseholdMember[];
   initialWorkplaces: Workplace[];
+  onSavedRedirectTo?: string;
+  showSkipLink?: { href: string; label: string };
+  saveLabel?: string;
 }) {
   const [core, setCore] = useState<CoreFormState>(toState(initialCore));
   const [members, setMembers] = useState<MemberFormState[]>(membersToState(initialMembers));
@@ -90,6 +99,7 @@ export default function ProfileForm({
   );
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const router = useRouter();
 
   const updateCore = <K extends keyof CoreFormState>(key: K, value: CoreFormState[K]) => {
     setCore((c) => ({ ...c, [key]: value }));
@@ -137,6 +147,7 @@ export default function ProfileForm({
       });
       if (result.ok) {
         setMessage({ kind: "ok", text: "저장 완료" });
+        if (onSavedRedirectTo) router.push(onSavedRedirectTo);
       } else {
         setMessage({ kind: "err", text: result.error });
       }
@@ -273,12 +284,10 @@ export default function ProfileForm({
               </div>
               <div>
                 <label className="text-xs text-zinc-500">주소</label>
-                <input
-                  type="text"
+                <AddressSearch
                   value={w.address}
-                  onChange={(e) => updateWorkplace(idx, { address: e.target.value })}
-                  placeholder="서울특별시 강남구 테헤란로 123"
-                  className="input"
+                  onChange={(addr) => updateWorkplace(idx, { address: addr })}
+                  placeholder="주소 검색 버튼으로 선택"
                 />
               </div>
             </div>
@@ -344,25 +353,37 @@ export default function ProfileForm({
         </div>
       </Section>
 
-      <div className="sticky bottom-0 -mx-4 flex items-center justify-end gap-3 border-t border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur">
-        {message && (
-          <span
-            className={
-              message.kind === "ok"
-                ? "text-sm text-green-700"
-                : "text-sm text-red-700"
-            }
+      <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur">
+        <div>
+          {showSkipLink && (
+            <Link
+              href={showSkipLink.href}
+              className="text-sm text-zinc-500 hover:text-zinc-900"
+            >
+              {showSkipLink.label}
+            </Link>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {message && (
+            <span
+              className={
+                message.kind === "ok"
+                  ? "text-sm text-green-700"
+                  : "text-sm text-red-700"
+              }
+            >
+              {message.text}
+            </span>
+          )}
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {message.text}
-          </span>
-        )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {pending ? "저장 중..." : "저장"}
-        </button>
+            {pending ? "저장 중..." : saveLabel}
+          </button>
+        </div>
       </div>
 
       <style jsx>{`
