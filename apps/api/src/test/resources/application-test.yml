@@ -4,6 +4,8 @@ spring:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   flyway:
     enabled: false
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  data:
+    redis:
+      # Lettuce 는 lazy connect — 실제 호출 시점에만 접속 시도. contextLoads 는 통과.
+      host: localhost
+      port: 6379
