@@ -116,6 +116,28 @@ export interface FullProfile {
   housingHistory: unknown[];
 }
 
+export interface MatchingScore {
+  total: number;
+  max: number;
+  eligibility: number;
+  budget: number;
+  region: number;
+  bestSupplyType: SupplyType | null;
+  notes: string[];
+}
+
+export interface MatchedListing {
+  listing: ListingSummary;
+  score: MatchingScore;
+}
+
+export interface MatchedListingPage {
+  content: MatchedListing[];
+  page: number;
+  size: number;
+  total: number;
+}
+
 export interface ScoreResp {
   total: number;
   max: number;

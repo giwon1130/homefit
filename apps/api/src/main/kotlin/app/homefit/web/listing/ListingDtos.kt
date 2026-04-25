@@ -123,3 +123,51 @@ data class EligibilityResponse(
         )
     }
 }
+
+data class MatchingScoreDto(
+    val total: Int,
+    val max: Int,
+    val eligibility: Int,
+    val budget: Int,
+    val region: Int,
+    val bestSupplyType: SupplyType?,
+    val notes: List<String>,
+) {
+    companion object {
+        fun from(s: app.homefit.domain.listing.matching.MatchingScore) = MatchingScoreDto(
+            total = s.total,
+            max = app.homefit.domain.listing.matching.MatchingScore.MAX_TOTAL,
+            eligibility = s.eligibility,
+            budget = s.budget,
+            region = s.region,
+            bestSupplyType = s.bestSupplyType,
+            notes = s.notes,
+        )
+    }
+}
+
+data class MatchedListingResponse(
+    val listing: ListingSummaryResponse,
+    val score: MatchingScoreDto,
+) {
+    companion object {
+        fun from(m: app.homefit.application.listing.MatchedListing) = MatchedListingResponse(
+            listing = ListingSummaryResponse.from(m.listing),
+            score = MatchingScoreDto.from(m.score),
+        )
+    }
+}
+
+data class MatchedListingPageResponse(
+    val content: List<MatchedListingResponse>,
+    val page: Int,
+    val size: Int,
+    val total: Long,
+) {
+    companion object {
+        fun from(p: app.homefit.application.listing.MatchedListingPage) = MatchedListingPageResponse(
+            content = p.content.map { MatchedListingResponse.from(it) },
+            page = p.page, size = p.size, total = p.total,
+        )
+    }
+}

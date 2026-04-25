@@ -75,6 +75,8 @@ class JdbcListingQueryRepository(
             ListingQuery.Sort.CLOSING -> "COALESCE(application_end, application_start, announcement_date::timestamptz) ASC NULLS LAST"
             ListingQuery.Sort.ANNOUNCEMENT -> "announcement_date DESC NULLS LAST"
             ListingQuery.Sort.MOVE_IN -> "move_in_date ASC NULLS LAST"
+            // MATCH 정렬은 인메모리에서 처리 — 쿼리는 임박순으로 일단 가져오고 application 레이어에서 재정렬.
+            ListingQuery.Sort.MATCH -> "COALESCE(application_end, announcement_date::timestamptz) ASC NULLS LAST"
         }
 
         val countSql = "SELECT COUNT(*) FROM listings $whereSql"
@@ -94,6 +96,16 @@ class JdbcListingQueryRepository(
 
         val content = jdbc.query(dataSql, params, listingMapper)
         return ListingPage(content, query.page, query.size, total)
+    }
+
+    override fun findUnitsByListingIds(ids: Collection<Long>): Map<Long, List<ListingUnit>> {
+        if (ids.isEmpty()) return emptyMap()
+        val rows = jdbc.query(
+            "SELECT id, listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw FROM listing_units WHERE listing_id IN (:ids)",
+            MapSqlParameterSource("ids", ids),
+            unitMapper,
+        )
+        return rows.groupBy { it.listingId }
     }
 
     override fun findDetail(id: Long): ListingDetail? {

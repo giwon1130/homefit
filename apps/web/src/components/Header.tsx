@@ -17,6 +17,9 @@ export default function Header() {
           </Link>
           {status === "authenticated" ? (
             <>
+              <Link href="/match" className="text-zinc-600 hover:text-zinc-900">
+                내맞춤
+              </Link>
               <Link href="/profile" className="text-zinc-600 hover:text-zinc-900">
                 프로필
               </Link>
