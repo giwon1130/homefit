@@ -36,6 +36,9 @@ springdoc:
     path: /swagger-ui.html
 
 homefit:
+  admin:
+    # 관리자 큐레이션 엔드포인트(/api/v1/admin/*) 보호용. ingestion 토큰 재사용 가능.
+    token: ${ADMIN_TOKEN:${INGESTION_ADMIN_TOKEN:dev-admin-token-change-me}}
   auth:
     jwt-secret: ${JWT_SECRET:dev-secret-change-me-in-prod-at-least-32-bytes}
     access-token-ttl-minutes: 15
