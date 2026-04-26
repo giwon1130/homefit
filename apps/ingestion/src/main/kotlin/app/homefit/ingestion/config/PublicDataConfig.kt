@@ -14,3 +14,10 @@ data class PublicDataProperties(
 data class IngestionProperties(
     val adminToken: String,
 )
+
+@ConfigurationProperties(prefix = "homefit.lh")
+data class LhProperties(
+    val apiKey: String = "",
+    val lookbackDays: Long = 365,
+    val pageSize: Int = 100,
+)
