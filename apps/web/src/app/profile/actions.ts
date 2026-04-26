@@ -61,6 +61,12 @@ const IncomeSchema = z.object({
   spouseAmount: longOrNull,
 });
 
+const AssetsSchema = z.object({
+  netWorth: longOrNull,
+  realEstate: longOrNull,
+  monthlyDebt: longOrNull,
+});
+
 const PreferencesSchema = z.object({
   maxPurchasePrice: longOrNull,        // 매매 예산 (원)
   maxJeonsePrice: longOrNull,          // 전세 예산 (원)
@@ -76,6 +82,7 @@ const SaveSchema = z.object({
   members: z.array(MemberSchema),
   workplaces: z.array(WorkplaceSchema),
   incomes: z.array(IncomeSchema).optional(),
+  assets: AssetsSchema.optional(),
   preferences: PreferencesSchema.optional(),
 });
 
@@ -166,6 +173,15 @@ export async function saveProfile(input: SaveProfileInput): Promise<SaveProfileR
       body: JSON.stringify(parsed.data.incomes),
     });
     if (!incRes.ok) return { ok: false, error: `소득 저장 실패 (HTTP ${incRes.status})` };
+  }
+
+  // assets (자산 + 월 채무 — DSR 계산용)
+  if (parsed.data.assets) {
+    const aRes = await apiFetch("/api/v1/profile/assets", {
+      method: "PUT",
+      body: JSON.stringify(parsed.data.assets),
+    });
+    if (!aRes.ok) return { ok: false, error: `자산 저장 실패 (HTTP ${aRes.status})` };
   }
 
   // preferences (예산/방수/통근시간/선호지역)

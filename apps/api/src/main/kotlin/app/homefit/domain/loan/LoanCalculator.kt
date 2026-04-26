@@ -17,11 +17,28 @@ class LoanCalculator(private val props: LoanProperties) {
     fun estimate(input: LoanInputs): LoanEstimate {
         val notes = mutableListOf<String>()
 
-        val products = listOfNotNull(
+        // 1) 상품별 한도
+        val rawProducts = listOfNotNull(
             evalBogeumjari(input, notes),
             evalNewlywedDidimdol(input, notes),
             evalGenericLtv(input),
         )
+
+        // 2) DSR 한도 — 모든 상품에 공통 적용
+        val dsrCap = computeDsrLimit(input)
+        if (dsrCap != null) {
+            notes += "DSR 40% 기준 한도 약 ${dsrCap.eok()}억 (기존 채무 월 ${(input.monthlyDebtKrw ?: 0L).man()}만원 반영)"
+        }
+
+        // 3) 각 상품 한도에 DSR cap 적용
+        val products = rawProducts.map { p ->
+            if (!p.eligible || p.limitKrw == null || dsrCap == null) p
+            else if (p.limitKrw <= dsrCap) p
+            else p.copy(
+                limitKrw = dsrCap,
+                reasons = p.reasons + "DSR 한도 ${dsrCap.eok()}억 적용 (원 한도 ${p.limitKrw.eok()}억)",
+            )
+        }
 
         val recommended = products
             .filter { it.eligible }
@@ -38,6 +55,25 @@ class LoanCalculator(private val props: LoanProperties) {
             notes = notes,
         )
     }
+
+    /**
+     * DSR 40% 기준 신규 주담대 가능 한도.
+     * 가정: 30년 만기 원리금균등, 연 4.5% → 1억당 월 506,685원 (연 6,080,220원).
+     * 대출 한도 ≈ (연소득 × 0.4 - 기존 연 상환) ÷ (연 상환 per 1억) × 1억.
+     */
+    private fun computeDsrLimit(input: LoanInputs): Long? {
+        val income = input.annualIncomeKrw ?: return null
+        if (income <= 0) return null
+        val dsrAnnualCap = (income * 0.40).toLong()
+        val existingAnnualPayment = (input.monthlyDebtKrw ?: 0L) * 12
+        val available = dsrAnnualCap - existingAnnualPayment
+        if (available <= 0) return 0L
+        val annualPaymentPer1Eok = 6_080_220L
+        return (available.toDouble() / annualPaymentPer1Eok * 100_000_000L).toLong()
+    }
+
+    private fun Long.man(): String =
+        (this / 10_000).toString()
 
     private fun evalBogeumjari(input: LoanInputs, notes: MutableList<String>): LoanProductResult {
         val rule = props.bogeumjari

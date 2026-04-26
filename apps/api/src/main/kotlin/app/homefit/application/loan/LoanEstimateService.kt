@@ -27,6 +27,7 @@ class LoanEstimateService(
         val members = profile.findHouseholdMembers(userId)
         val incomes = profile.findIncomes(userId)
         val history = profile.findHousingHistory(userId)
+        val assets = profile.findAssets(userId)
 
         val today = LocalDate.now()
         val annualIncome = latestAnnualIncome(incomes)
@@ -43,6 +44,7 @@ class LoanEstimateService(
             hasOwnedHouse = history.isNotEmpty(),
             childrenCount = childrenCount,
             region = detail.listing.sido,
+            monthlyDebtKrw = assets?.monthlyDebt,
         )
         return calculator.estimate(input)
     }

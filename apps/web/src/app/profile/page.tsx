@@ -40,6 +40,7 @@ export default async function ProfilePage() {
         initialMembers={profile.householdMembers}
         initialWorkplaces={profile.workplaces}
         initialIncomes={profile.incomes}
+        initialAssets={profile.assets}
         initialPreferences={profile.preferences}
       />
     </div>

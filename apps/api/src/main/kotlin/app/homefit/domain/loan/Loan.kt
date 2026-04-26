@@ -30,4 +30,5 @@ data class LoanInputs(
     val hasOwnedHouse: Boolean,
     val childrenCount: Int,
     val region: String?,                // sido — LTV 분기용
+    val monthlyDebtKrw: Long? = null,   // 기존 채무 월 상환액 (DSR 계산용)
 )

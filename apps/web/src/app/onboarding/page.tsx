@@ -34,6 +34,7 @@ export default async function OnboardingPage() {
         initialMembers={profile.householdMembers}
         initialWorkplaces={profile.workplaces}
         initialIncomes={profile.incomes}
+        initialAssets={profile.assets}
         initialPreferences={profile.preferences}
         onSavedRedirectTo="/match"
         showSkipLink={{ href: "/match", label: "건너뛰고 둘러보기 →" }}
