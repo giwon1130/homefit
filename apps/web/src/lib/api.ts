@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { auth, signOut } from "@/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -22,10 +21,10 @@ export async function apiFetch(
   }
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
 
-  // 세션이 있는데 401 → 백엔드 토큰 만료. 쿠키 정리 후 /login.
+  // 세션이 있는데 401 → 백엔드 토큰 만료. 무음 로그아웃 + /login 리다이렉트.
+  // signOut() 은 NextAuth v5 서버사이드 — CSRF 확인 페이지 안 보여주고 쿠키 정리.
   if (res.status === 401 && session?.accessToken && !init?.allow401) {
-    // NextAuth 가 redirect 받으면 쿠키를 클리어하지 않으므로 /api/auth/signout 으로 보냄.
-    redirect(`/api/auth/signout?callbackUrl=${encodeURIComponent("/login?error=session_expired")}`);
+    await signOut({ redirectTo: "/login?error=session_expired" });
   }
   return res;
 }
