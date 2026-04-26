@@ -52,13 +52,53 @@ export interface ListingPage {
 }
 
 export interface ListingDetail extends ListingSummary {
+  latitude?: number | null;
+  longitude?: number | null;
+  winnerAnnouncementDate?: string;
   units: Array<{
     id: number;
     unitType?: string;
     sizeM2?: number;
     supplyCount?: number;
     priceMaxKrw?: number;
+    depositAmount?: number;
+    monthlyRent?: number;
   }>;
+}
+
+export type SupplyType = "GENERAL" | "FIRST_TIME" | "NEWLYWED" | "MULTI_CHILD";
+
+export const SUPPLY_TYPE_LABEL: Record<SupplyType, string> = {
+  GENERAL: "일반공급",
+  FIRST_TIME: "생애최초",
+  NEWLYWED: "신혼부부",
+  MULTI_CHILD: "다자녀",
+};
+
+export interface EligibilityResp {
+  eligibleSupplyTypes: SupplyType[];
+  bestSupplyType: SupplyType | null;
+  details: Array<{
+    supplyType: SupplyType;
+    eligible: boolean;
+    reasons: string[];
+  }>;
+}
+
+export interface LoanProduct {
+  name: string;
+  eligible: boolean;
+  limitKrw: number | null;
+  reasons: string[];
+}
+
+export interface LoanEstimateResp {
+  listingPriceKrw: number;
+  annualIncomeKrw: number | null;
+  products: LoanProduct[];
+  recommended: LoanProduct | null;
+  selfFundingKrw: number | null;
+  notes: string[];
 }
 
 export const LISTING_TYPE_LABEL: Record<ListingType, string> = {
