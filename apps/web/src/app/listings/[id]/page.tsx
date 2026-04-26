@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { apiFetch, type EligibilityResp, type ListingDetail } from "@/lib/api";
+import {
+  apiFetch,
+  type EligibilityResp,
+  type ListingDetail,
+  type LoanEstimateResp,
+} from "@/lib/api";
 import { auth } from "@/auth";
 import FavoriteButton from "@/components/FavoriteButton";
 import ListingMap from "@/components/ListingMap";
@@ -73,16 +78,19 @@ export default async function ListingDetailPage({ params }: Props) {
   const session = await auth();
   let eligibility: EligibilityResp | null = null;
   let isFavorited = false;
+  let loan: LoanEstimateResp | null = null;
   if (session?.accessToken) {
-    const [er, fr] = await Promise.all([
+    const [er, fr, lr] = await Promise.all([
       apiFetch(`/api/v1/listings/${id}/eligibility`),
       apiFetch("/api/v1/favorites"),
+      apiFetch(`/api/v1/listings/${id}/loan-estimate`, { allow401: true }),
     ]);
     if (er.ok) eligibility = await er.json();
     if (fr.ok) {
       const list = (await fr.json()) as { id: number }[];
       isFavorited = list.some((x) => x.id === Number(id));
     }
+    if (lr.ok) loan = await lr.json();
   }
 
   return (
@@ -195,6 +203,8 @@ export default async function ListingDetailPage({ params }: Props) {
         <Field label="총 공급세대" value={listing.totalSupply?.toString() ?? "-"} />
       </section>
 
+      {loan && <LoanCard loan={loan} />}
+
       {listing.units.length > 0 && (
         <section>
           <h2 className="mb-2 font-semibold">공급 유형별</h2>
@@ -245,5 +255,85 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="text-xs text-zinc-500">{label}</div>
       <div className="mt-1 font-medium">{value}</div>
     </div>
+  );
+}
+
+function LoanCard({ loan }: { loan: LoanEstimateResp }) {
+  return (
+    <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-semibold">내 대출 가능액 (추정)</h2>
+        <span className="text-xs text-zinc-500">2025 기준 · 실제 한도는 기관 시뮬레이터로 확인</span>
+      </div>
+
+      {loan.recommended ? (
+        <div className="mt-3 rounded bg-white p-3">
+          <div className="text-xs text-zinc-500">추천 상품</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="font-semibold text-amber-900">{loan.recommended.name}</span>
+            <span className="text-lg font-bold">
+              {loan.recommended.limitKrw ? formatKrw(loan.recommended.limitKrw) : "-"}
+            </span>
+          </div>
+          {loan.selfFundingKrw != null && (
+            <div className="mt-1 text-xs text-zinc-600">
+              자기부담 약 <strong>{formatKrw(loan.selfFundingKrw)}</strong>
+              {" "}
+              (분양가 {formatKrw(loan.listingPriceKrw)} 기준)
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-zinc-600">적용 가능한 상품이 없어요. 프로필 소득을 확인해주세요.</p>
+      )}
+
+      <ul className="mt-3 space-y-2">
+        {loan.products.map((p) => (
+          <li
+            key={p.name}
+            className={p.eligible ? "rounded bg-white p-3" : "rounded bg-white p-3 opacity-60"}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{p.name}</span>
+              <span className={p.eligible ? "text-sm text-green-700" : "text-sm text-zinc-500"}>
+                {p.eligible
+                  ? p.limitKrw
+                    ? `${formatKrw(p.limitKrw)} 가능`
+                    : "가능"
+                  : "불가"}
+              </span>
+            </div>
+            <ul className="mt-1 list-disc pl-5 text-xs text-zinc-600">
+              {p.reasons.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 text-xs text-zinc-500">
+        ⚠ 여기 숫자는 단순 추정. 실제 한도는 기관별 심사·DSR·신용도에 따라 달라집니다.
+        <br />
+        정확한 시뮬레이션:{" "}
+        <a
+          href="https://nhuf.molit.go.kr/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          기금e든든
+        </a>
+        {", "}
+        <a
+          href="https://www.hf.go.kr/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          한국주택금융공사
+        </a>
+      </p>
+    </section>
   );
 }

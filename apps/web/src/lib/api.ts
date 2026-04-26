@@ -98,6 +98,24 @@ export interface EligibilityResp {
   details: EligibilityDetailResp[];
 }
 
+// ---- loan ----
+
+export interface LoanProduct {
+  name: string;
+  eligible: boolean;
+  limitKrw: number | null;
+  reasons: string[];
+}
+
+export interface LoanEstimateResp {
+  listingPriceKrw: number;
+  annualIncomeKrw: number | null;
+  products: LoanProduct[];
+  recommended: LoanProduct | null;
+  selfFundingKrw: number | null;
+  notes: string[];
+}
+
 // ---- profile ----
 
 export type HouseholdRelation =

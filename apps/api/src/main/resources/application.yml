@@ -75,6 +75,23 @@ homefit:
       happy-house:
         newlywed: { marriage-years-max: 7, income-pct-limit: 100 }
         general: true
+  loan:
+    # 보금자리론, 디딤돌, LTV 한도 (2025 추정 — 매년 갱신 필요)
+    bogeumjari:
+      income-limit-default: 70000000
+      income-limit-multi-child: 100000000
+      price-limit: 900000000
+      max-loan-default: 420000000
+      max-loan-first-time: 450000000
+    newlywed-didimdol:
+      marriage-years-max: 7
+      income-limit: 85000000
+      price-limit: 600000000
+      max-loan: 400000000
+    region-ltv:
+      "[서울특별시]": 50
+      "[경기도]": 60
+    default-ltv-pct: 70
 
 logging:
   level:
