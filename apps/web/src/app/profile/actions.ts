@@ -55,6 +55,12 @@ const WorkplaceSchema = z.object({
   arrivalTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("09:00"),
 });
 
+const IncomeSchema = z.object({
+  year: z.preprocess((v) => Number(v), z.number().int().min(2000).max(2100)),
+  selfAmount: longOrNull,
+  spouseAmount: longOrNull,
+});
+
 const PreferencesSchema = z.object({
   maxPurchasePrice: longOrNull,        // 매매 예산 (원)
   maxJeonsePrice: longOrNull,          // 전세 예산 (원)
@@ -69,6 +75,7 @@ const SaveSchema = z.object({
   core: CoreSchema,
   members: z.array(MemberSchema),
   workplaces: z.array(WorkplaceSchema),
+  incomes: z.array(IncomeSchema).optional(),
   preferences: PreferencesSchema.optional(),
 });
 
@@ -151,6 +158,15 @@ export async function saveProfile(input: SaveProfileInput): Promise<SaveProfileR
     body: JSON.stringify(wpPayload),
   });
   if (!wpRes.ok) return { ok: false, error: `직장 저장 실패 (HTTP ${wpRes.status})` };
+
+  // incomes (대출 추정/매칭 자격용)
+  if (parsed.data.incomes) {
+    const incRes = await apiFetch("/api/v1/profile/incomes", {
+      method: "PUT",
+      body: JSON.stringify(parsed.data.incomes),
+    });
+    if (!incRes.ok) return { ok: false, error: `소득 저장 실패 (HTTP ${incRes.status})` };
+  }
 
   // preferences (예산/방수/통근시간/선호지역)
   if (parsed.data.preferences) {

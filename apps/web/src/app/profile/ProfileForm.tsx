@@ -6,6 +6,7 @@ import Link from "next/link";
 import type {
   HouseholdMember,
   HouseholdRelation,
+  Income,
   Preferences,
   ProfileCore,
   Workplace,
@@ -43,6 +44,13 @@ type WorkplaceFormState = {
   label: string;
   address: string;
   arrivalTime: string;
+};
+
+type IncomeFormState = {
+  /** 단일행 단순화. 부부합산 연소득(만원). 작년 기준 권장. */
+  year: number;
+  selfMan: string;
+  spouseMan: string;
 };
 
 type PreferencesFormState = {
@@ -108,6 +116,16 @@ function workplacesToState(list: Workplace[]): WorkplaceFormState[] {
   }));
 }
 
+function incomesToState(list: Income[]): IncomeFormState {
+  const latest = list.length > 0 ? list.reduce((a, b) => (a.year > b.year ? a : b)) : null;
+  const man = (n?: number | null) => (n != null && n > 0 ? Math.round(n / 10_000).toString() : "");
+  return {
+    year: latest?.year ?? new Date().getFullYear() - 1,
+    selfMan: man(latest?.selfAmount),
+    spouseMan: man(latest?.spouseAmount),
+  };
+}
+
 function prefsToState(p: Preferences | null): PreferencesFormState {
   const eok = (n?: number | null) =>
     n != null && n > 0 ? (n / 100_000_000).toString() : "";
@@ -128,6 +146,7 @@ export default function ProfileForm({
   initialCore,
   initialMembers,
   initialWorkplaces,
+  initialIncomes,
   initialPreferences,
   onSavedRedirectTo,
   showSkipLink,
@@ -136,6 +155,7 @@ export default function ProfileForm({
   initialCore: ProfileCore;
   initialMembers: HouseholdMember[];
   initialWorkplaces: Workplace[];
+  initialIncomes: Income[];
   initialPreferences: Preferences | null;
   onSavedRedirectTo?: string;
   showSkipLink?: { href: string; label: string };
@@ -146,6 +166,7 @@ export default function ProfileForm({
   const [workplaces, setWorkplaces] = useState<WorkplaceFormState[]>(
     workplacesToState(initialWorkplaces),
   );
+  const [income, setIncome] = useState<IncomeFormState>(incomesToState(initialIncomes));
   const [prefs, setPrefs] = useState<PreferencesFormState>(prefsToState(initialPreferences));
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -194,6 +215,7 @@ export default function ProfileForm({
             address: w.address,
             arrivalTime: w.arrivalTime,
           })),
+        incomes: incomePayload(income),
         preferences: {
           // 억원 → 원, 만원 → 원 변환
           maxPurchasePrice: parseEokToWon(prefs.maxPurchaseEok),
@@ -413,6 +435,31 @@ export default function ProfileForm({
         </div>
       </Section>
 
+      <Section title="연소득 (대출/매칭 자격용, 암호화 저장)">
+        <Field label={`${income.year}년 본인 연소득 (만원)`}>
+          <input
+            type="number"
+            min={0}
+            step="100"
+            value={income.selfMan}
+            onChange={(e) => setIncome((s) => ({ ...s, selfMan: e.target.value }))}
+            placeholder="예: 5000 (= 5천만)"
+            className="input"
+          />
+        </Field>
+        <Field label={`${income.year}년 배우자 연소득 (만원)`}>
+          <input
+            type="number"
+            min={0}
+            step="100"
+            value={income.spouseMan}
+            onChange={(e) => setIncome((s) => ({ ...s, spouseMan: e.target.value }))}
+            placeholder="예: 4000"
+            className="input"
+          />
+        </Field>
+      </Section>
+
       <Section title="예산 및 선호">
         <Field label="매매 예산 (억원)">
           <input
@@ -563,6 +610,17 @@ export default function ProfileForm({
       `}</style>
     </form>
   );
+}
+
+function incomePayload(s: IncomeFormState) {
+  const toWon = (v: string) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n * 10_000 : null;
+  };
+  const self = toWon(s.selfMan);
+  const spouse = toWon(s.spouseMan);
+  if (self == null && spouse == null) return [];
+  return [{ year: s.year, selfAmount: self, spouseAmount: spouse }];
 }
 
 function parseEokToWon(s: string): string {
