@@ -1,8 +1,17 @@
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
-export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+/**
+ * 서버 컴포넌트/액션에서만 사용. 401 받으면 세션 만료로 간주해 자동 로그아웃 후 /login 리다이렉트.
+ *  - signIn 안 한 익명 호출에도 401 가능 — session 이 있을 때만 로그아웃 처리
+ *  - 호출자가 명시적으로 401 처리하고 싶으면 `allow401: true` 옵션
+ */
+export async function apiFetch(
+  path: string,
+  init?: RequestInit & { allow401?: boolean },
+): Promise<Response> {
   const session = await auth();
   const headers = new Headers(init?.headers);
   if (!headers.has("Content-Type") && init?.body) {
@@ -11,7 +20,14 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   if (session?.accessToken) {
     headers.set("Authorization", `Bearer ${session.accessToken}`);
   }
-  return fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
+
+  // 세션이 있는데 401 → 백엔드 토큰 만료. 쿠키 정리 후 /login.
+  if (res.status === 401 && session?.accessToken && !init?.allow401) {
+    // NextAuth 가 redirect 받으면 쿠키를 클리어하지 않으므로 /api/auth/signout 으로 보냄.
+    redirect(`/api/auth/signout?callbackUrl=${encodeURIComponent("/login?error=session_expired")}`);
+  }
+  return res;
 }
 
 // ---- typed response models (subset) ----

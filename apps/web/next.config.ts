@@ -12,7 +12,7 @@ const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://*.daumcdn.net",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com https://*.googleusercontent.com",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://*.googleusercontent.com",
   `connect-src 'self' ${apiBase} https://api.vworld.kr https://api.odsay.com https://nominatim.openstreetmap.org`,
   "font-src 'self' data:",
   "frame-src https://postcode.map.daum.net",
