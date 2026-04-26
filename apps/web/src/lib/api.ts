@@ -164,11 +164,17 @@ export interface Preferences {
   preferredSidos?: string[];
 }
 
+export interface Income {
+  year: number;
+  selfAmount?: number | null;
+  spouseAmount?: number | null;
+}
+
 export interface FullProfile {
   userId: number;
   core: ProfileCore;
   householdMembers: HouseholdMember[];
-  incomes: Array<{ year: number; selfAmount?: number; spouseAmount?: number }>;
+  incomes: Income[];
   assets: { netWorth?: number; realEstate?: number } | null;
   residences: unknown[];
   workplaces: Workplace[];
