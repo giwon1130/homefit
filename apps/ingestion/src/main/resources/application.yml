@@ -35,6 +35,10 @@ homefit:
     rest-api-key: ${KAKAO_REST_API_KEY:}
   vworld:
     api-key: ${VWORLD_API_KEY:}
+  lh:
+    api-key: ${LH_API_KEY:}
+    lookback-days: 365      # LH는 활성 공고 수가 상대적으로 적어 1년 윈도우
+    page-size: 100
 
 logging:
   level:

@@ -1,9 +1,12 @@
 package app.homefit.ingestion.application.listing
 
+import app.homefit.ingestion.config.LhProperties
 import app.homefit.ingestion.config.PublicDataProperties
 import app.homefit.ingestion.domain.listing.ListingSource
 import app.homefit.ingestion.domain.listing.RawListing
 import app.homefit.ingestion.infrastructure.kakao.Geocoder
+import app.homefit.ingestion.infrastructure.lh.LhClient
+import app.homefit.ingestion.infrastructure.lh.LhMapper
 import app.homefit.ingestion.infrastructure.persistence.IngestionRunRepository
 import app.homefit.ingestion.infrastructure.persistence.ListingRepository
 import app.homefit.ingestion.infrastructure.publicdata.ApplyhomeMapper
@@ -24,6 +27,9 @@ class ListingIngestionService(
     private val runs: IngestionRunRepository,
     private val props: PublicDataProperties,
     private val geocoder: Geocoder,
+    private val lhClient: LhClient,
+    private val lhMapper: LhMapper,
+    private val lhProps: LhProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -60,6 +66,41 @@ class ListingIngestionService(
             IngestionResult(pages, upserted)
         } catch (e: Exception) {
             log.error("applyhome apt sync failed", e)
+            runs.fail(runId, e.toString())
+            throw e
+        }
+    }
+
+    /**
+     * LH 분양임대공고 동기화 (행복주택, 공공분양, 신혼희망타운, 임대 등).
+     * 목록 endpoint 는 단지명/유형/지역/날짜만 줌. 주소·세부는 후속 PR (상세 endpoint)에서 enrich.
+     */
+    fun syncLh(lookbackDays: Long = lhProps.lookbackDays): IngestionResult {
+        val runId = runs.start(ListingSource.LH.code)
+        return try {
+            val from = LocalDate.now().minusDays(lookbackDays)
+            val to = LocalDate.now().plusDays(180)
+            var page = 1
+            var pages = 0
+            var upserted = 0
+            while (true) {
+                val notices = lhClient.fetchNotices(page, lhProps.pageSize, from, to)
+                pages++
+                if (notices.isEmpty()) break
+                for (n in notices) {
+                    val raw = lhMapper.toRawListing(n) ?: continue
+                    listings.upsert(raw)
+                    upserted++
+                }
+                if (notices.size < lhProps.pageSize) break
+                page++
+                if (page > 50) { log.warn("LH page guard tripped"); break }
+            }
+            runs.succeed(runId, pages, upserted)
+            log.info("LH sync done pages={} upserted={}", pages, upserted)
+            IngestionResult(pages, upserted)
+        } catch (e: Exception) {
+            log.error("LH sync failed", e)
             runs.fail(runId, e.toString())
             throw e
         }

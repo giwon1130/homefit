@@ -35,6 +35,13 @@ class IngestionAdminController(
         return mapOf("pages" to result.pages, "upserted" to result.upserted)
     }
 
+    @PostMapping("/run-lh")
+    fun runLh(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
+        require(token)
+        val result = service.syncLh()
+        return mapOf("pages" to result.pages, "upserted" to result.upserted)
+    }
+
     @PostMapping("/geocode-backfill")
     fun geocodeBackfill(
         @RequestHeader("X-Admin-Token") token: String,
