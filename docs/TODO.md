@@ -1,0 +1,38 @@
+# Backlog
+
+작업 진행 중 미뤄둔 항목들. 우선순위는 위에서 아래로.
+
+## 알림 발송 (D-1 청약 마감 푸시)
+
+배경: 즐겨찾기한 청약의 접수 마감 1일 전 푸시. UX 핵심이지만 인프라 작업이 큼.
+
+필요 작업:
+- `push_tokens` 테이블 + `notifications` 테이블 (Phase 1 PRD 에 스키마 있음)
+- 토큰 등록 엔드포인트: `POST /api/v1/push-tokens` (인증 + platform/token)
+- 모바일/웹에서 토큰 발급:
+  - iOS: APNs (Expo Notifications)
+  - Android: FCM
+  - Web: Web Push (VAPID 키 발급)
+- 스케줄러 (ingestion 또는 api): 매시간 D-1 임박 즐겨찾기 스캔
+- 발송 게이트웨이:
+  - APNs: Apple Developer 계정 + cert
+  - FCM: Firebase 프로젝트
+  - Web Push: VAPID + service worker
+- 알림 환경설정 페이지 (D-1, 당일, 결과발표 토글)
+
+대안: 서비스 빠르게 띄우려면 **이메일 발송 (D-1)** 먼저. SendGrid/Mailgun 무료 티어로 가볍게.
+
+## Sentry 에러 트래킹
+- DSN 발급 후 api + web 양쪽 SDK 설치
+- 401/500 자동 캡처 + 사용자 컨텍스트 (user.id)
+
+## /listings 좌표 정밀화
+- LH 누락 단지 (~457개) 수동 큐레이션 admin 페이지
+- 또는 lh.or.kr 상세 HTML 파싱 (legal/robots 검토)
+
+## matches 테이블 precompute
+- 사용자 수가 많아지면 /match 응답이 느려질 것. 백그라운드 워커가 사용자별 점수 미리 계산해서 DB 저장.
+- 현재는 Redis 캐시(30분)로 충분.
+
+## 백업 자동화
+- Railway Hobby 자동 백업이 약함. 야간 `pg_dump` → S3 (또는 GitHub release artifact).
