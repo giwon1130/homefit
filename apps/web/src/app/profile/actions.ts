@@ -55,10 +55,21 @@ const WorkplaceSchema = z.object({
   arrivalTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("09:00"),
 });
 
+const PreferencesSchema = z.object({
+  maxPurchasePrice: longOrNull,        // 매매 예산 (원)
+  maxJeonsePrice: longOrNull,          // 전세 예산 (원)
+  maxMonthlyRent: intOrNull,           // 월세 한도 (원)
+  maxDepositForRent: longOrNull,       // 보증금 한도 (원)
+  minRooms: intOrNull,                 // 최소 방 개수
+  maxCommuteMinutes: intOrNull,        // 최대 통근 시간 (분)
+  preferredSidos: z.array(z.string()).default([]),  // 선호 시도 풀네임
+});
+
 const SaveSchema = z.object({
   core: CoreSchema,
   members: z.array(MemberSchema),
   workplaces: z.array(WorkplaceSchema),
+  preferences: PreferencesSchema.optional(),
 });
 
 export type SaveProfileInput = z.input<typeof SaveSchema>;
@@ -140,6 +151,15 @@ export async function saveProfile(input: SaveProfileInput): Promise<SaveProfileR
     body: JSON.stringify(wpPayload),
   });
   if (!wpRes.ok) return { ok: false, error: `직장 저장 실패 (HTTP ${wpRes.status})` };
+
+  // preferences (예산/방수/통근시간/선호지역)
+  if (parsed.data.preferences) {
+    const prefRes = await apiFetch("/api/v1/profile/preferences", {
+      method: "PUT",
+      body: JSON.stringify(parsed.data.preferences),
+    });
+    if (!prefRes.ok) return { ok: false, error: `선호 저장 실패 (HTTP ${prefRes.status})` };
+  }
 
   revalidatePath("/profile");
   return { ok: true };

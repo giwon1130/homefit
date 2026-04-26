@@ -134,6 +134,18 @@ export interface Workplace {
   arrivalTime?: string;
 }
 
+export interface Preferences {
+  maxPurchasePrice?: number | null;
+  maxJeonsePrice?: number | null;
+  maxMonthlyRent?: number | null;
+  maxDepositForRent?: number | null;
+  minSizeM2?: number | null;
+  maxSizeM2?: number | null;
+  minRooms?: number | null;
+  maxCommuteMinutes?: number | null;
+  preferredSidos?: string[];
+}
+
 export interface FullProfile {
   userId: number;
   core: ProfileCore;
@@ -142,7 +154,7 @@ export interface FullProfile {
   assets: { netWorth?: number; realEstate?: number } | null;
   residences: unknown[];
   workplaces: Workplace[];
-  preferences: unknown | null;
+  preferences: Preferences | null;
   housingHistory: unknown[];
 }
 
