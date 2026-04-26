@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type {
+  Assets,
   HouseholdMember,
   HouseholdRelation,
   Income,
@@ -50,6 +51,12 @@ type IncomeRow = {
   year: number;
   selfMan: string;
   spouseMan: string;
+};
+
+type AssetsFormState = {
+  netWorthEok: string;
+  realEstateEok: string;
+  monthlyDebtMan: string;
 };
 
 type PreferencesFormState = {
@@ -125,6 +132,16 @@ function incomesToState(list: Income[]): IncomeRow[] {
     .map((i) => ({ year: i.year, selfMan: man(i.selfAmount), spouseMan: man(i.spouseAmount) }));
 }
 
+function assetsToState(a: Assets | null): AssetsFormState {
+  const eok = (n?: number | null) => (n != null && n > 0 ? (n / 100_000_000).toString() : "");
+  const man = (n?: number | null) => (n != null && n > 0 ? Math.round(n / 10_000).toString() : "");
+  return {
+    netWorthEok: eok(a?.netWorth),
+    realEstateEok: eok(a?.realEstate),
+    monthlyDebtMan: man(a?.monthlyDebt),
+  };
+}
+
 function prefsToState(p: Preferences | null): PreferencesFormState {
   const eok = (n?: number | null) =>
     n != null && n > 0 ? (n / 100_000_000).toString() : "";
@@ -146,6 +163,7 @@ export default function ProfileForm({
   initialMembers,
   initialWorkplaces,
   initialIncomes,
+  initialAssets,
   initialPreferences,
   onSavedRedirectTo,
   showSkipLink,
@@ -155,6 +173,7 @@ export default function ProfileForm({
   initialMembers: HouseholdMember[];
   initialWorkplaces: Workplace[];
   initialIncomes: Income[];
+  initialAssets: Assets | null;
   initialPreferences: Preferences | null;
   onSavedRedirectTo?: string;
   showSkipLink?: { href: string; label: string };
@@ -166,6 +185,7 @@ export default function ProfileForm({
     workplacesToState(initialWorkplaces),
   );
   const [incomes, setIncomes] = useState<IncomeRow[]>(incomesToState(initialIncomes));
+  const [assets, setAssets] = useState<AssetsFormState>(assetsToState(initialAssets));
   const [prefs, setPrefs] = useState<PreferencesFormState>(prefsToState(initialPreferences));
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -215,6 +235,11 @@ export default function ProfileForm({
             arrivalTime: w.arrivalTime,
           })),
         incomes: incomePayload(incomes),
+        assets: {
+          netWorth: parseEokToWon(assets.netWorthEok),
+          realEstate: parseEokToWon(assets.realEstateEok),
+          monthlyDebt: parseManToWon(assets.monthlyDebtMan),
+        },
         preferences: {
           // 억원 → 원, 만원 → 원 변환
           maxPurchasePrice: parseEokToWon(prefs.maxPurchaseEok),
@@ -510,6 +535,42 @@ export default function ProfileForm({
             + 이전 연도 추가
           </button>
         </div>
+      </Section>
+
+      <Section title="자산 / 채무 (대출 한도 정밀화용)">
+        <Field label="순자산 (억원)">
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            value={assets.netWorthEok}
+            onChange={(e) => setAssets((a) => ({ ...a, netWorthEok: e.target.value }))}
+            placeholder="예: 3"
+            className="input"
+          />
+        </Field>
+        <Field label="부동산 평가액 (억원)">
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            value={assets.realEstateEok}
+            onChange={(e) => setAssets((a) => ({ ...a, realEstateEok: e.target.value }))}
+            placeholder="예: 2"
+            className="input"
+          />
+        </Field>
+        <Field label="기존 채무 월 상환액 (만원/월)">
+          <input
+            type="number"
+            min={0}
+            step="10"
+            value={assets.monthlyDebtMan}
+            onChange={(e) => setAssets((a) => ({ ...a, monthlyDebtMan: e.target.value }))}
+            placeholder="예: 50 (= 50만원/월)"
+            className="input"
+          />
+        </Field>
       </Section>
 
       <Section title="예산 및 선호">

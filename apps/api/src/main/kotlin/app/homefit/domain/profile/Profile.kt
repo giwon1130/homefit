@@ -24,6 +24,8 @@ data class Income(
 data class Assets(
     val netWorth: Long?,
     val realEstate: Long?,
+    /** 기존 채무의 월 상환액(원). DSR 계산용. */
+    val monthlyDebt: Long? = null,
     val updatedAt: OffsetDateTime? = null,
 )
 

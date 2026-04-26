@@ -156,12 +156,13 @@ class JdbcProfileRepository(
 
     override fun findAssets(userId: Long): Assets? =
         jdbc.query(
-            "SELECT net_worth_enc, real_estate_enc, updated_at FROM assets WHERE user_id = :uid",
+            "SELECT net_worth_enc, real_estate_enc, monthly_debt_amount_enc, updated_at FROM assets WHERE user_id = :uid",
             MapSqlParameterSource("uid", userId),
         ) { rs, _ ->
             Assets(
                 netWorth = enc.decryptLong(rs.getBytes("net_worth_enc")),
                 realEstate = enc.decryptLong(rs.getBytes("real_estate_enc")),
+                monthlyDebt = enc.decryptLong(rs.getBytes("monthly_debt_amount_enc")),
                 updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
             )
         }.firstOrNull()
@@ -169,19 +170,21 @@ class JdbcProfileRepository(
     @Transactional
     override fun saveAssets(userId: Long, assets: Assets) {
         val sql = """
-            INSERT INTO assets (user_id, net_worth_enc, real_estate_enc, updated_at)
-            VALUES (:uid, :net_enc, :real_enc, now())
+            INSERT INTO assets (user_id, net_worth_enc, real_estate_enc, monthly_debt_amount_enc, updated_at)
+            VALUES (:uid, :net_enc, :real_enc, :debt_enc, now())
             ON CONFLICT (user_id) DO UPDATE SET
-                net_worth_enc   = EXCLUDED.net_worth_enc,
-                real_estate_enc = EXCLUDED.real_estate_enc,
-                updated_at      = now()
+                net_worth_enc           = EXCLUDED.net_worth_enc,
+                real_estate_enc         = EXCLUDED.real_estate_enc,
+                monthly_debt_amount_enc = EXCLUDED.monthly_debt_amount_enc,
+                updated_at              = now()
         """.trimIndent()
         jdbc.update(
             sql,
             MapSqlParameterSource()
                 .addValue("uid", userId)
                 .addValue("net_enc", enc.encryptLong(assets.netWorth))
-                .addValue("real_enc", enc.encryptLong(assets.realEstate)),
+                .addValue("real_enc", enc.encryptLong(assets.realEstate))
+                .addValue("debt_enc", enc.encryptLong(assets.monthlyDebt)),
         )
     }
 

@@ -169,12 +169,18 @@ export interface Income {
   spouseAmount?: number | null;
 }
 
+export interface Assets {
+  netWorth?: number | null;
+  realEstate?: number | null;
+  monthlyDebt?: number | null;     // 기존 채무 월 상환액 (원)
+}
+
 export interface FullProfile {
   userId: number;
   core: ProfileCore;
   householdMembers: HouseholdMember[];
   incomes: Income[];
-  assets: { netWorth?: number; realEstate?: number } | null;
+  assets: Assets | null;
   residences: unknown[];
   workplaces: Workplace[];
   preferences: Preferences | null;
