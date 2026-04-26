@@ -26,14 +26,35 @@ class VWorldGeocoderClient(
         .codecs { it.defaultCodecs().maxInMemorySize(2 * 1024 * 1024) }
         .build()
 
+    /**
+     * Railway(SG 리전) → VWorld 호출이 502/connection-reset 으로 거의 다 실패.
+     * 연속 실패가 임계치를 넘으면 이후 호출을 즉시 null 로 포기 (각 호출 마다 5~10초
+     * 타임아웃 누적되는 걸 방지). 백필은 로컬 스크립트로 처리.
+     */
+    @Volatile private var consecutiveFailures = 0
+    @Volatile private var disabledUntilEpochMs: Long = 0L
+
     override fun geocode(address: String): GeoPoint? {
         if (apiKey.isBlank()) {
             log.warn("VWORLD_API_KEY not set — geocoding skipped")
             return null
         }
+        if (System.currentTimeMillis() < disabledUntilEpochMs) return null
+
         val cleaned = clean(address)
         // ROAD(도로명) 우선
-        return queryOnce(cleaned, "ROAD") ?: queryOnce(cleaned, "PARCEL")
+        val result = queryOnce(cleaned, "ROAD") ?: queryOnce(cleaned, "PARCEL")
+        if (result == null) {
+            consecutiveFailures += 1
+            if (consecutiveFailures >= MAX_CONSEC_FAILS) {
+                disabledUntilEpochMs = System.currentTimeMillis() + COOLDOWN_MS
+                log.warn("vworld disabled for {}ms after {} consecutive failures (use local backfill)", COOLDOWN_MS, consecutiveFailures)
+                consecutiveFailures = 0
+            }
+        } else {
+            consecutiveFailures = 0
+        }
+        return result
     }
 
     private fun queryOnce(address: String, type: String): GeoPoint? {
@@ -83,5 +104,10 @@ class VWorldGeocoderClient(
 
         @JsonIgnoreProperties(ignoreUnknown = true)
         data class Point(val x: String = "0", val y: String = "0")
+    }
+
+    companion object {
+        private const val MAX_CONSEC_FAILS = 3
+        private const val COOLDOWN_MS = 30 * 60_000L  // 30분
     }
 }
