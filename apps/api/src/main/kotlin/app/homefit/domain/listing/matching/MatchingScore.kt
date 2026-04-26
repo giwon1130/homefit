@@ -111,12 +111,16 @@ class MatchingScoreCalculator(
     }
 
     /**
-     * 통근 점수: 본인+배우자 직장 중 가장 짧은 통근시간 기준.
+     * 통근 점수 (사용자가 직장 입력했으면 데이터 부족 → 페널티).
      *  - 30분 이내: 30점
      *  - 30~60분: 30 → 10 선형 감쇠
      *  - 60~90분: 10 → 0 선형 감쇠
      *  - 90분 초과: 0
-     *  - 데이터 부족: 15 (중간점)
+     *  - 사용자 직장 미입력: 15 (중간점, 사용자가 알려주지 않은 거라 중립)
+     *  - 직장 있는데 단지 좌표 없음: 3 (평가 불가 — 강하게 페널티)
+     *  - 직장 있는데 통근 조회 실패: 5 (의심의 여지 — 약하게 페널티)
+     *
+     * 핵심: 사용자가 직장을 알려줬다면, 통근 데이터가 부족한 단지는 위로 올리지 않는다.
      */
     private fun commuteFit(
         listing: Listing,
@@ -124,16 +128,27 @@ class MatchingScoreCalculator(
         commuteLookup: (Pair<java.math.BigDecimal, java.math.BigDecimal>, Pair<java.math.BigDecimal, java.math.BigDecimal>) -> Int?,
         notes: MutableList<String>,
     ): Pair<Int, Int?> {
-        val lLat = listing.latitude; val lLng = listing.longitude
-        if (lLat == null || lLng == null) { notes += "단지 좌표 없음 (통근 중간점)"; return 15 to null }
         val origins = workplaces.mapNotNull { wp ->
             val wLat = wp.latitude; val wLng = wp.longitude
             if (wLat != null && wLng != null) wLat to wLng else null
         }
-        if (origins.isEmpty()) { notes += "직장 정보 없음 (통근 중간점)"; return 15 to null }
+        if (origins.isEmpty()) {
+            notes += "직장 미입력 (통근 중립점)"
+            return 15 to null
+        }
+
+        // 사용자가 직장 정보를 줬으니 이제부터는 listing 측 데이터 부족 시 페널티.
+        val lLat = listing.latitude; val lLng = listing.longitude
+        if (lLat == null || lLng == null) {
+            notes += "단지 좌표 미확보 — 통근 점수 산출 불가"
+            return 3 to null
+        }
 
         val minutes = origins.mapNotNull { commuteLookup(it, lLat to lLng) }.minOrNull()
-        if (minutes == null) { notes += "통근시간 조회 실패 (통근 중간점)"; return 15 to null }
+        if (minutes == null) {
+            notes += "통근시간 조회 실패"
+            return 5 to null
+        }
 
         val score = when {
             minutes <= 30 -> 30

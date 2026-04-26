@@ -44,7 +44,8 @@ class MatchCache(
             .onFailure { log.warn("redis evict failed: {}", it.message) }
     }
 
-    private fun key(userId: Long) = "homefit:match:v1:$userId"
+    // v2: 통근 점수 데이터 부족 페널티 적용 (이전 v1 결과 무효화)
+    private fun key(userId: Long) = "homefit:match:v2:$userId"
 
     companion object {
         private val TTL: Duration = Duration.ofMinutes(30)
