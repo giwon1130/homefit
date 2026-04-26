@@ -38,6 +38,7 @@ export default async function ProfilePage() {
         initialCore={profile.core}
         initialMembers={profile.householdMembers}
         initialWorkplaces={profile.workplaces}
+        initialPreferences={profile.preferences}
       />
     </div>
   );

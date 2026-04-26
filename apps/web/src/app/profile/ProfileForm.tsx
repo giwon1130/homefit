@@ -6,6 +6,7 @@ import Link from "next/link";
 import type {
   HouseholdMember,
   HouseholdRelation,
+  Preferences,
   ProfileCore,
   Workplace,
   WorkplaceOwner,
@@ -44,7 +45,37 @@ type WorkplaceFormState = {
   arrivalTime: string;
 };
 
+type PreferencesFormState = {
+  maxPurchaseEok: string;        // 매매 예산 (억원 단위 입력 — UX 단순화)
+  maxJeonseEok: string;          // 전세 예산 (억원)
+  maxMonthlyRentMan: string;     // 월세 한도 (만원)
+  maxDepositEok: string;         // 보증금 한도 (억원)
+  minRooms: string;
+  maxCommuteMinutes: string;
+  preferredSidos: string[];
+};
+
 const OWNER_LABEL: Record<WorkplaceOwner, string> = { SELF: "본인", SPOUSE: "배우자" };
+
+const SIDO_OPTIONS: ReadonlyArray<{ short: string; full: string }> = [
+  { short: "서울", full: "서울특별시" },
+  { short: "경기", full: "경기도" },
+  { short: "인천", full: "인천광역시" },
+  { short: "부산", full: "부산광역시" },
+  { short: "대구", full: "대구광역시" },
+  { short: "대전", full: "대전광역시" },
+  { short: "광주", full: "광주광역시" },
+  { short: "울산", full: "울산광역시" },
+  { short: "세종", full: "세종특별자치시" },
+  { short: "강원", full: "강원특별자치도" },
+  { short: "충북", full: "충청북도" },
+  { short: "충남", full: "충청남도" },
+  { short: "전북", full: "전북특별자치도" },
+  { short: "전남", full: "전라남도" },
+  { short: "경북", full: "경상북도" },
+  { short: "경남", full: "경상남도" },
+  { short: "제주", full: "제주특별자치도" },
+];
 
 function toState(core: ProfileCore): CoreFormState {
   return {
@@ -77,10 +108,27 @@ function workplacesToState(list: Workplace[]): WorkplaceFormState[] {
   }));
 }
 
+function prefsToState(p: Preferences | null): PreferencesFormState {
+  const eok = (n?: number | null) =>
+    n != null && n > 0 ? (n / 100_000_000).toString() : "";
+  const man = (n?: number | null) =>
+    n != null && n > 0 ? (n / 10_000).toString() : "";
+  return {
+    maxPurchaseEok: eok(p?.maxPurchasePrice),
+    maxJeonseEok: eok(p?.maxJeonsePrice),
+    maxMonthlyRentMan: man(p?.maxMonthlyRent),
+    maxDepositEok: eok(p?.maxDepositForRent),
+    minRooms: p?.minRooms?.toString() ?? "",
+    maxCommuteMinutes: p?.maxCommuteMinutes?.toString() ?? "",
+    preferredSidos: p?.preferredSidos ?? [],
+  };
+}
+
 export default function ProfileForm({
   initialCore,
   initialMembers,
   initialWorkplaces,
+  initialPreferences,
   onSavedRedirectTo,
   showSkipLink,
   saveLabel = "저장",
@@ -88,6 +136,7 @@ export default function ProfileForm({
   initialCore: ProfileCore;
   initialMembers: HouseholdMember[];
   initialWorkplaces: Workplace[];
+  initialPreferences: Preferences | null;
   onSavedRedirectTo?: string;
   showSkipLink?: { href: string; label: string };
   saveLabel?: string;
@@ -97,6 +146,7 @@ export default function ProfileForm({
   const [workplaces, setWorkplaces] = useState<WorkplaceFormState[]>(
     workplacesToState(initialWorkplaces),
   );
+  const [prefs, setPrefs] = useState<PreferencesFormState>(prefsToState(initialPreferences));
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const router = useRouter();
@@ -144,6 +194,16 @@ export default function ProfileForm({
             address: w.address,
             arrivalTime: w.arrivalTime,
           })),
+        preferences: {
+          // 억원 → 원, 만원 → 원 변환
+          maxPurchasePrice: parseEokToWon(prefs.maxPurchaseEok),
+          maxJeonsePrice: parseEokToWon(prefs.maxJeonseEok),
+          maxMonthlyRent: parseManToWon(prefs.maxMonthlyRentMan),
+          maxDepositForRent: parseEokToWon(prefs.maxDepositEok),
+          minRooms: prefs.minRooms,
+          maxCommuteMinutes: prefs.maxCommuteMinutes,
+          preferredSidos: prefs.preferredSidos,
+        },
       });
       if (result.ok) {
         setMessage({ kind: "ok", text: "저장 완료" });
@@ -353,6 +413,105 @@ export default function ProfileForm({
         </div>
       </Section>
 
+      <Section title="예산 및 선호">
+        <Field label="매매 예산 (억원)">
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            value={prefs.maxPurchaseEok}
+            onChange={(e) => setPrefs((p) => ({ ...p, maxPurchaseEok: e.target.value }))}
+            placeholder="예: 8 (= 8억)"
+            className="input"
+          />
+        </Field>
+        <Field label="전세 예산 (억원)">
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            value={prefs.maxJeonseEok}
+            onChange={(e) => setPrefs((p) => ({ ...p, maxJeonseEok: e.target.value }))}
+            placeholder="예: 5"
+            className="input"
+          />
+        </Field>
+        <Field label="월세 한도 (만원/월)">
+          <input
+            type="number"
+            min={0}
+            step="10"
+            value={prefs.maxMonthlyRentMan}
+            onChange={(e) => setPrefs((p) => ({ ...p, maxMonthlyRentMan: e.target.value }))}
+            placeholder="예: 80 (= 80만원)"
+            className="input"
+          />
+        </Field>
+        <Field label="보증금 한도 (억원)">
+          <input
+            type="number"
+            min={0}
+            step="0.5"
+            value={prefs.maxDepositEok}
+            onChange={(e) => setPrefs((p) => ({ ...p, maxDepositEok: e.target.value }))}
+            placeholder="예: 1"
+            className="input"
+          />
+        </Field>
+        <Field label="최소 방 수">
+          <input
+            type="number"
+            min={0}
+            max={10}
+            value={prefs.minRooms}
+            onChange={(e) => setPrefs((p) => ({ ...p, minRooms: e.target.value }))}
+            placeholder="예: 3"
+            className="input"
+          />
+        </Field>
+        <Field label="최대 통근 시간 (분)">
+          <input
+            type="number"
+            min={0}
+            max={180}
+            step={5}
+            value={prefs.maxCommuteMinutes}
+            onChange={(e) => setPrefs((p) => ({ ...p, maxCommuteMinutes: e.target.value }))}
+            placeholder="예: 60"
+            className="input"
+          />
+        </Field>
+        <div className="sm:col-span-2">
+          <span className="text-xs text-zinc-500">선호 지역 (복수 선택)</span>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {SIDO_OPTIONS.map(({ short, full }) => {
+              const on = prefs.preferredSidos.includes(full);
+              return (
+                <button
+                  key={full}
+                  type="button"
+                  onClick={() =>
+                    setPrefs((p) => ({
+                      ...p,
+                      preferredSidos: on
+                        ? p.preferredSidos.filter((s) => s !== full)
+                        : [...p.preferredSidos, full],
+                    }))
+                  }
+                  className={
+                    on
+                      ? "rounded-full border border-blue-600 bg-blue-600 px-3 py-1 text-xs font-medium text-white"
+                      : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+                  }
+                >
+                  {short}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
+
       <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur">
         <div>
           {showSkipLink && (
@@ -404,6 +563,18 @@ export default function ProfileForm({
       `}</style>
     </form>
   );
+}
+
+function parseEokToWon(s: string): string {
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return Math.round(n * 100_000_000).toString();
+}
+
+function parseManToWon(s: string): string {
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return Math.round(n * 10_000).toString();
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
