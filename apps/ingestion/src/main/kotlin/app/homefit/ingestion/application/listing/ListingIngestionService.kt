@@ -6,6 +6,7 @@ import app.homefit.ingestion.domain.listing.ListingSource
 import app.homefit.ingestion.domain.listing.RawListing
 import app.homefit.ingestion.infrastructure.kakao.Geocoder
 import app.homefit.ingestion.infrastructure.lh.LhClient
+import app.homefit.ingestion.infrastructure.lh.LhEnricher
 import app.homefit.ingestion.infrastructure.lh.LhMapper
 import app.homefit.ingestion.infrastructure.persistence.IngestionRunRepository
 import app.homefit.ingestion.infrastructure.persistence.ListingRepository
@@ -29,6 +30,7 @@ class ListingIngestionService(
     private val geocoder: Geocoder,
     private val lhClient: LhClient,
     private val lhMapper: LhMapper,
+    private val lhEnricher: LhEnricher,
     private val lhProps: LhProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -88,8 +90,12 @@ class ListingIngestionService(
                 pages++
                 if (notices.isEmpty()) break
                 for (n in notices) {
-                    val raw = lhMapper.toRawListing(n) ?: continue
-                    listings.upsert(raw)
+                    val base = lhMapper.toRawListing(n) ?: continue
+                    val enriched = runCatching { lhEnricher.enrich(base, n) }
+                        .onFailure { log.warn("LH enrich failed for {}: {}", n.panId, it.message) }
+                        .getOrDefault(base)
+                    val withGeo = enrichWithCoordinates(enriched)
+                    listings.upsert(withGeo)
                     upserted++
                 }
                 if (notices.size < lhProps.pageSize) break

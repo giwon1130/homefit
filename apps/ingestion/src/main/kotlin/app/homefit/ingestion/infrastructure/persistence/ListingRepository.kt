@@ -118,8 +118,12 @@ class ListingRepository(
         if (units.isEmpty()) return
 
         val sql = """
-            INSERT INTO listing_units (listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw, raw_json)
-            VALUES (:listing_id, :model_no, :unit_type, :size_m2, :supply_count, :price_max_krw, CAST(:raw_json AS jsonb))
+            INSERT INTO listing_units
+                (listing_id, model_no, unit_type, size_m2, supply_count,
+                 price_max_krw, deposit_amount, monthly_rent, raw_json)
+            VALUES
+                (:listing_id, :model_no, :unit_type, :size_m2, :supply_count,
+                 :price_max_krw, :deposit_amount, :monthly_rent, CAST(:raw_json AS jsonb))
         """.trimIndent()
         val batch = units.map { u ->
             MapSqlParameterSource()
@@ -129,6 +133,8 @@ class ListingRepository(
                 .addValue("size_m2", u.sizeM2)
                 .addValue("supply_count", u.supplyCount)
                 .addValue("price_max_krw", u.priceMaxKrw)
+                .addValue("deposit_amount", u.depositAmount)
+                .addValue("monthly_rent", u.monthlyRent)
                 .addValue("raw_json", u.rawJson)
         }.toTypedArray()
         jdbc.batchUpdate(sql, batch)

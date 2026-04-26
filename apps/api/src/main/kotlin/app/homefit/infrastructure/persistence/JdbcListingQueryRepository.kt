@@ -54,6 +54,8 @@ class JdbcListingQueryRepository(
             sizeM2 = rs.getBigDecimal("size_m2"),
             supplyCount = rs.getObject("supply_count") as? Int,
             priceMaxKrw = rs.getObject("price_max_krw") as? Long,
+            depositAmount = rs.getObject("deposit_amount") as? Long,
+            monthlyRent = rs.getObject("monthly_rent") as? Int,
         )
     }
 
@@ -116,7 +118,7 @@ class JdbcListingQueryRepository(
     override fun findUnitsByListingIds(ids: Collection<Long>): Map<Long, List<ListingUnit>> {
         if (ids.isEmpty()) return emptyMap()
         val rows = jdbc.query(
-            "SELECT id, listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw FROM listing_units WHERE listing_id IN (:ids)",
+            "SELECT id, listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw, deposit_amount, monthly_rent FROM listing_units WHERE listing_id IN (:ids)",
             MapSqlParameterSource("ids", ids),
             unitMapper,
         )
@@ -137,7 +139,7 @@ class JdbcListingQueryRepository(
         ).firstOrNull() ?: return null
 
         val units = jdbc.query(
-            "SELECT id, listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw FROM listing_units WHERE listing_id = :id ORDER BY id",
+            "SELECT id, listing_id, model_no, unit_type, size_m2, supply_count, price_max_krw, deposit_amount, monthly_rent FROM listing_units WHERE listing_id = :id ORDER BY id",
             MapSqlParameterSource("id", id),
             unitMapper,
         )
