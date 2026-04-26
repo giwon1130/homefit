@@ -33,11 +33,12 @@ class SecurityConfig {
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                     ).permitAll()
-                    // Auth required (먼저 매치되도록 위에 둠) — /listings/match, /listings/*/eligibility
+                    // Auth required (먼저 매치되도록 위에 둠) — /listings/match, /listings/*/eligibility, /listings/*/loan-estimate
                     .requestMatchers(
                         org.springframework.http.HttpMethod.GET,
                         "/api/v1/listings/match",
                         "/api/v1/listings/*/eligibility",
+                        "/api/v1/listings/*/loan-estimate",
                     ).authenticated()
                     // 그 외 listings GET은 공개
                     .requestMatchers(
