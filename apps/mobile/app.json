@@ -17,8 +17,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser"
     ],
+    "extra": {
+      "apiBaseUrl": "https://api-production-1d45.up.railway.app",
+      "googleClientId": ""
+    },
     "experiments": {
       "typedRoutes": true
     }
