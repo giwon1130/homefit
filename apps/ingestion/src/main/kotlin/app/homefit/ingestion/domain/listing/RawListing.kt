@@ -36,5 +36,7 @@ data class RawListingUnit(
     val sizeM2: java.math.BigDecimal?,
     val supplyCount: Int?,
     val priceMaxKrw: Long?,
+    val depositAmount: Long? = null,   // 임대 보증금 (원)
+    val monthlyRent: Int? = null,      // 임대 월세 (원)
     val rawJson: String,
 )

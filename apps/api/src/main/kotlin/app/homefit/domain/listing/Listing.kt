@@ -37,6 +37,8 @@ data class ListingUnit(
     val sizeM2: BigDecimal?,
     val supplyCount: Int?,
     val priceMaxKrw: Long?,
+    val depositAmount: Long? = null,
+    val monthlyRent: Int? = null,
 )
 
 data class ListingDetail(
