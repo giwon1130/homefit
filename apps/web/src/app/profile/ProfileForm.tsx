@@ -46,8 +46,7 @@ type WorkplaceFormState = {
   arrivalTime: string;
 };
 
-type IncomeFormState = {
-  /** 단일행 단순화. 부부합산 연소득(만원). 작년 기준 권장. */
+type IncomeRow = {
   year: number;
   selfMan: string;
   spouseMan: string;
@@ -116,14 +115,14 @@ function workplacesToState(list: Workplace[]): WorkplaceFormState[] {
   }));
 }
 
-function incomesToState(list: Income[]): IncomeFormState {
-  const latest = list.length > 0 ? list.reduce((a, b) => (a.year > b.year ? a : b)) : null;
+function incomesToState(list: Income[]): IncomeRow[] {
   const man = (n?: number | null) => (n != null && n > 0 ? Math.round(n / 10_000).toString() : "");
-  return {
-    year: latest?.year ?? new Date().getFullYear() - 1,
-    selfMan: man(latest?.selfAmount),
-    spouseMan: man(latest?.spouseAmount),
-  };
+  if (list.length === 0) {
+    return [{ year: new Date().getFullYear() - 1, selfMan: "", spouseMan: "" }];
+  }
+  return [...list]
+    .sort((a, b) => b.year - a.year)
+    .map((i) => ({ year: i.year, selfMan: man(i.selfAmount), spouseMan: man(i.spouseAmount) }));
 }
 
 function prefsToState(p: Preferences | null): PreferencesFormState {
@@ -166,7 +165,7 @@ export default function ProfileForm({
   const [workplaces, setWorkplaces] = useState<WorkplaceFormState[]>(
     workplacesToState(initialWorkplaces),
   );
-  const [income, setIncome] = useState<IncomeFormState>(incomesToState(initialIncomes));
+  const [incomes, setIncomes] = useState<IncomeRow[]>(incomesToState(initialIncomes));
   const [prefs, setPrefs] = useState<PreferencesFormState>(prefsToState(initialPreferences));
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -215,7 +214,7 @@ export default function ProfileForm({
             address: w.address,
             arrivalTime: w.arrivalTime,
           })),
-        incomes: incomePayload(income),
+        incomes: incomePayload(incomes),
         preferences: {
           // 억원 → 원, 만원 → 원 변환
           maxPurchasePrice: parseEokToWon(prefs.maxPurchaseEok),
@@ -436,28 +435,81 @@ export default function ProfileForm({
       </Section>
 
       <Section title="연소득 (대출/매칭 자격용, 암호화 저장)">
-        <Field label={`${income.year}년 본인 연소득 (만원)`}>
-          <input
-            type="number"
-            min={0}
-            step="100"
-            value={income.selfMan}
-            onChange={(e) => setIncome((s) => ({ ...s, selfMan: e.target.value }))}
-            placeholder="예: 5000 (= 5천만)"
-            className="input"
-          />
-        </Field>
-        <Field label={`${income.year}년 배우자 연소득 (만원)`}>
-          <input
-            type="number"
-            min={0}
-            step="100"
-            value={income.spouseMan}
-            onChange={(e) => setIncome((s) => ({ ...s, spouseMan: e.target.value }))}
-            placeholder="예: 4000"
-            className="input"
-          />
-        </Field>
+        <div className="sm:col-span-2 space-y-2">
+          {incomes.length === 0 && (
+            <p className="text-sm text-zinc-500">없음. + 버튼으로 추가하세요.</p>
+          )}
+          {incomes.map((row, idx) => (
+            <div key={idx} className="flex flex-wrap items-end gap-2">
+              <div className="w-20">
+                <label className="text-xs text-zinc-500">연도</label>
+                <input
+                  type="number"
+                  min={2000}
+                  max={2100}
+                  value={row.year}
+                  onChange={(e) =>
+                    setIncomes((rs) =>
+                      rs.map((r, i) => (i === idx ? { ...r, year: Number(e.target.value) } : r)),
+                    )
+                  }
+                  className="input"
+                />
+              </div>
+              <div className="flex-1 min-w-[140px]">
+                <label className="text-xs text-zinc-500">본인 (만원)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="100"
+                  placeholder="5000"
+                  value={row.selfMan}
+                  onChange={(e) =>
+                    setIncomes((rs) =>
+                      rs.map((r, i) => (i === idx ? { ...r, selfMan: e.target.value } : r)),
+                    )
+                  }
+                  className="input"
+                />
+              </div>
+              <div className="flex-1 min-w-[140px]">
+                <label className="text-xs text-zinc-500">배우자 (만원)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="100"
+                  placeholder="4000"
+                  value={row.spouseMan}
+                  onChange={(e) =>
+                    setIncomes((rs) =>
+                      rs.map((r, i) => (i === idx ? { ...r, spouseMan: e.target.value } : r)),
+                    )
+                  }
+                  className="input"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIncomes((rs) => rs.filter((_, i) => i !== idx))}
+                className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setIncomes((rs) => {
+                const nextYear = rs.length > 0 ? Math.min(...rs.map((r) => r.year)) - 1 : new Date().getFullYear() - 1;
+                return [...rs, { year: nextYear, selfMan: "", spouseMan: "" }];
+              })
+            }
+            className="rounded border border-dashed border-zinc-400 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+          >
+            + 이전 연도 추가
+          </button>
+        </div>
       </Section>
 
       <Section title="예산 및 선호">
@@ -612,15 +664,19 @@ export default function ProfileForm({
   );
 }
 
-function incomePayload(s: IncomeFormState) {
+function incomePayload(rows: IncomeRow[]) {
   const toWon = (v: string) => {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? n * 10_000 : null;
   };
-  const self = toWon(s.selfMan);
-  const spouse = toWon(s.spouseMan);
-  if (self == null && spouse == null) return [];
-  return [{ year: s.year, selfAmount: self, spouseAmount: spouse }];
+  return rows
+    .map((r) => {
+      const self = toWon(r.selfMan);
+      const spouse = toWon(r.spouseMan);
+      if (self == null && spouse == null) return null;
+      return { year: r.year, selfAmount: self, spouseAmount: spouse };
+    })
+    .filter((r): r is { year: number; selfAmount: number | null; spouseAmount: number | null } => r != null);
 }
 
 function parseEokToWon(s: string): string {
