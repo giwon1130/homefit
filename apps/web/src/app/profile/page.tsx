@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { apiFetch, type FullProfile, type Income, type ScoreResp } from "@/lib/api";
 import ProfileForm from "./ProfileForm";
+import NotificationPreferences from "./NotificationPreferences";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,10 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session?.accessToken) redirect("/login");
 
-  const [profileRes, scoreRes] = await Promise.all([
+  const [profileRes, scoreRes, notifRes] = await Promise.all([
     apiFetch("/api/v1/profile"),
     apiFetch("/api/v1/profile/score"),
+    apiFetch("/api/v1/notifications/preferences"),
   ]);
   if (!profileRes.ok) {
     return (
@@ -22,6 +24,9 @@ export default async function ProfilePage() {
   }
   const profile: FullProfile = await profileRes.json();
   const score: ScoreResp | null = scoreRes.ok ? await scoreRes.json() : null;
+  const notifPref: { emailEnabled: boolean } = notifRes.ok
+    ? await notifRes.json()
+    : { emailEnabled: true };
 
   return (
     <div className="space-y-6">
@@ -34,6 +39,7 @@ export default async function ProfilePage() {
 
       {score && <ScoreCard score={score} />}
       {profile.incomes.length > 0 && <IncomeTrend incomes={profile.incomes} />}
+      <NotificationPreferences initialEmailEnabled={notifPref.emailEnabled} />
 
       <ProfileForm
         initialCore={profile.core}

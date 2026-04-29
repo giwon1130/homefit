@@ -2,25 +2,28 @@
 
 작업 진행 중 미뤄둔 항목들. 우선순위는 위에서 아래로.
 
-## 알림 발송 (D-1 청약 마감 푸시)
+## ~~D-1 청약 마감 알림 (이메일)~~ ✅
 
-배경: 즐겨찾기한 청약의 접수 마감 1일 전 푸시. UX 핵심이지만 인프라 작업이 큼.
+이메일 발송 + 사용자 토글까지 완료 (PR feat/email-d1). 운영 적용 시 SMTP 환경변수
+(`SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `EMAIL_FROM`, `EMAIL_NOTIFICATIONS_ENABLED=true`,
+`WEB_BASE_URL`) 만 채우면 즉시 활성화.
+
+## 모바일 푸시 알림 (D-1 / 결과발표)
+
+이메일 다음 단계. 인프라 작업이 큼.
 
 필요 작업:
-- `push_tokens` 테이블 + `notifications` 테이블 (Phase 1 PRD 에 스키마 있음)
-- 토큰 등록 엔드포인트: `POST /api/v1/push-tokens` (인증 + platform/token)
+- `push_tokens` 테이블 (user_id, platform, token, registered_at)
+- 토큰 등록 엔드포인트: `POST /api/v1/push-tokens`
 - 모바일/웹에서 토큰 발급:
   - iOS: APNs (Expo Notifications)
   - Android: FCM
   - Web: Web Push (VAPID 키 발급)
-- 스케줄러 (ingestion 또는 api): 매시간 D-1 임박 즐겨찾기 스캔
-- 발송 게이트웨이:
+- 발송 게이트웨이 (이메일 dispatcher 옆에 채널 추가):
   - APNs: Apple Developer 계정 + cert
   - FCM: Firebase 프로젝트
   - Web Push: VAPID + service worker
-- 알림 환경설정 페이지 (D-1, 당일, 결과발표 토글)
-
-대안: 서비스 빠르게 띄우려면 **이메일 발송 (D-1)** 먼저. SendGrid/Mailgun 무료 티어로 가볍게.
+- 알림 환경설정 확장 (현재 emailEnabled 만 → pushEnabled, 결과발표 토글 등)
 
 ## Sentry 에러 트래킹
 - DSN 발급 후 api + web 양쪽 SDK 설치

@@ -26,9 +26,11 @@ import {
 } from "@/lib/api";
 import {
   eokToWon,
+  fetchNotificationPref,
   fetchProfile,
   manToWon,
   saveProfile,
+  setNotificationPref,
   wonToEok,
   wonToMan,
 } from "@/lib/profile";
@@ -187,14 +189,28 @@ export default function ProfileEditScreen() {
     maxCommuteMinutes: "",
     preferredSidos: [],
   });
+  const [emailNotif, setEmailNotif] = useState<boolean>(true);
+  const [notifSaving, setNotifSaving] = useState(false);
 
   useEffect(() => {
     void (async () => {
-      const data = await fetchProfile();
+      const [data, pref] = await Promise.all([fetchProfile(), fetchNotificationPref()]);
       if (data) hydrate(data);
+      setEmailNotif(pref);
       setLoading(false);
     })();
   }, []);
+
+  const toggleEmailNotif = async (next: boolean) => {
+    setEmailNotif(next);
+    setNotifSaving(true);
+    const r = await setNotificationPref(next);
+    setNotifSaving(false);
+    if (!r.ok) {
+      setEmailNotif(!next);
+      setError(r.error);
+    }
+  };
 
   const hydrate = (data: FullProfile) => {
     setCore(coreFromApi(data.core));
@@ -627,6 +643,29 @@ export default function ProfileEditScreen() {
           </View>
         </Section>
 
+        <Section title="알림">
+          <Text style={styles.muted}>
+            즐겨찾기한 청약의 접수 마감 1일 전 이메일로 알려드려요.
+          </Text>
+          <View style={styles.toggleRow}>
+            <Text style={{ fontSize: 14, color: "#0a0a0a" }}>D-1 이메일 알림</Text>
+            <Pressable
+              onPress={() => void toggleEmailNotif(!emailNotif)}
+              disabled={notifSaving}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: emailNotif }}
+              style={[styles.toggleTrack, emailNotif ? styles.toggleOn : styles.toggleOff]}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  emailNotif ? styles.toggleThumbOn : styles.toggleThumbOff,
+                ]}
+              />
+            </Pressable>
+          </View>
+        </Section>
+
         {error && (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
@@ -883,6 +922,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveBtnText: { color: "white", fontSize: 15, fontWeight: "700" },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleTrack: {
+    width: 44,
+    height: 24,
+    borderRadius: 999,
+    padding: 2,
+  },
+  toggleOn: { backgroundColor: "#2563eb" },
+  toggleOff: { backgroundColor: "#d4d4d8" },
+  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: "white" },
+  toggleThumbOn: { alignSelf: "flex-end" },
+  toggleThumbOff: { alignSelf: "flex-start" },
   errorBox: {
     backgroundColor: "#fee2e2",
     borderRadius: 8,

@@ -111,3 +111,25 @@ export function wonToEok(n?: number | null): string {
 export function wonToMan(n?: number | null): string {
   return n != null && n > 0 ? Math.round(n / 10_000).toString() : "";
 }
+
+// ---- notification preferences ----
+
+export async function fetchNotificationPref(): Promise<boolean> {
+  const res = await apiFetch("/api/v1/notifications/preferences");
+  if (!res.ok) return true;
+  const data = (await res.json()) as { emailEnabled: boolean };
+  return data.emailEnabled;
+}
+
+export async function setNotificationPref(emailEnabled: boolean): Promise<SaveResult> {
+  try {
+    const res = await apiFetch("/api/v1/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify({ emailEnabled }),
+    });
+    if (!res.ok) return { ok: false, error: `알림 설정 저장 실패 (${res.status})` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

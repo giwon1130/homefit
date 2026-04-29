@@ -1,6 +1,7 @@
 package app.homefit.ingestion.web
 
 import app.homefit.ingestion.application.listing.ListingIngestionService
+import app.homefit.ingestion.application.notification.NotificationDispatchService
 import app.homefit.ingestion.config.IngestionProperties
 import app.homefit.ingestion.infrastructure.persistence.ListingRepository
 import org.springframework.http.HttpStatus
@@ -23,6 +24,7 @@ class IngestionAdminController(
     private val service: ListingIngestionService,
     private val props: IngestionProperties,
     private val listings: ListingRepository,
+    private val notifications: NotificationDispatchService,
 ) {
     data class CoordEntry(val id: Long, val latitude: BigDecimal, val longitude: BigDecimal)
     data class BulkCoordRequest(val items: List<CoordEntry>)
@@ -84,6 +86,19 @@ class IngestionAdminController(
             updated += listings.updatePolygon(entry.id, json)
         }
         return mapOf("received" to body.items.size, "updated" to updated)
+    }
+
+    /** D-1 알림 수동 디스패치 (테스트/긴급 발송용). */
+    @PostMapping("/dispatch-d1")
+    fun dispatchD1(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
+        require(token)
+        val r = notifications.dispatchD1()
+        return mapOf(
+            "candidates" to r.candidates,
+            "sent" to r.sent,
+            "failed" to r.failed,
+            "skipped" to r.skipped,
+        )
     }
 
     private fun require(token: String) {
