@@ -8,5 +8,6 @@ import org.springframework.context.annotation.Configuration
     PublicDataProperties::class,
     IngestionProperties::class,
     LhProperties::class,
+    EmailNotificationProperties::class,
 )
 class PropertiesConfig

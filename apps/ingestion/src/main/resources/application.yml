@@ -13,6 +13,17 @@ spring:
       password: ${REDIS_PASSWORD:}
   flyway:
     enabled: false   # api 서비스가 마이그레이션 담당
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
 
 server:
   port: ${PORT:8081}
@@ -39,6 +50,12 @@ homefit:
     api-key: ${LH_API_KEY:}
     lookback-days: 365      # LH는 활성 공고 수가 상대적으로 적어 1년 윈도우
     page-size: 100
+  notification:
+    email:
+      # SMTP 설정(spring.mail.*) + 발신 도메인이 모두 갖춰지면 true 로
+      enabled: ${EMAIL_NOTIFICATIONS_ENABLED:false}
+      from: ${EMAIL_FROM:}
+      web-base-url: ${WEB_BASE_URL:https://homefit.app}
 
 logging:
   level:

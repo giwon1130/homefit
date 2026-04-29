@@ -21,3 +21,16 @@ data class LhProperties(
     val lookbackDays: Long = 365,
     val pageSize: Int = 100,
 )
+
+/**
+ * 알림 발송 설정. SMTP 자체 호스트/포트는 spring.mail.* 로 별도 관리.
+ * - from: 발신자 주소 (예: "homefit <noreply@homefit.app>")
+ * - webBaseUrl: 메일 본문 안의 단지 상세 링크 prefix (예: "https://homefit.app")
+ * - enabled: false 면 스케줄러 자체를 끔 (SMTP 미설정 환경 안전장치)
+ */
+@ConfigurationProperties(prefix = "homefit.notification.email")
+data class EmailNotificationProperties(
+    val enabled: Boolean = false,
+    val from: String = "",
+    val webBaseUrl: String = "https://homefit.app",
+)

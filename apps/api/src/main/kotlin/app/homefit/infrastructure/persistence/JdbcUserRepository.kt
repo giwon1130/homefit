@@ -61,4 +61,19 @@ class JdbcUserRepository(
         """.trimIndent()
         return jdbc.query(sql, MapSqlParameterSource("id", id), userMapper).firstOrNull()
     }
+
+    override fun isEmailNotificationsEnabled(userId: Long): Boolean {
+        return jdbc.queryForObject(
+            "SELECT notification_email_enabled FROM users WHERE id = :id",
+            MapSqlParameterSource("id", userId),
+            Boolean::class.java,
+        ) ?: true
+    }
+
+    override fun setEmailNotificationsEnabled(userId: Long, enabled: Boolean) {
+        jdbc.update(
+            "UPDATE users SET notification_email_enabled = :v WHERE id = :id",
+            MapSqlParameterSource().addValue("id", userId).addValue("v", enabled),
+        )
+    }
 }
