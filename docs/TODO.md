@@ -8,22 +8,15 @@
 (`SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `EMAIL_FROM`, `EMAIL_NOTIFICATIONS_ENABLED=true`,
 `WEB_BASE_URL`) 만 채우면 즉시 활성화.
 
-## 모바일 푸시 알림 (D-1 / 결과발표)
+## ~~모바일 푸시 알림 (D-1)~~ ✅
 
-이메일 다음 단계. 인프라 작업이 큼.
+iOS/Android 푸시 알림 완료 — Expo Push Service 사용 (APNs/FCM 추상화).
+웹 푸시(VAPID) 와 결과발표 알림은 다음 단계.
 
-필요 작업:
-- `push_tokens` 테이블 (user_id, platform, token, registered_at)
-- 토큰 등록 엔드포인트: `POST /api/v1/push-tokens`
-- 모바일/웹에서 토큰 발급:
-  - iOS: APNs (Expo Notifications)
-  - Android: FCM
-  - Web: Web Push (VAPID 키 발급)
-- 발송 게이트웨이 (이메일 dispatcher 옆에 채널 추가):
-  - APNs: Apple Developer 계정 + cert
-  - FCM: Firebase 프로젝트
-  - Web Push: VAPID + service worker
-- 알림 환경설정 확장 (현재 emailEnabled 만 → pushEnabled, 결과발표 토글 등)
+남은 후속:
+- 결과발표 알림 (announcementDate 윈도우)
+- 웹 푸시 (VAPID 키 발급 + service worker)
+- iOS Production APNs 인증 (Expo 가 sandbox/production 자동 분기 — TestFlight 업로드 시 production 자동)
 
 ## Sentry 에러 트래킹
 - DSN 발급 후 api + web 양쪽 SDK 설치

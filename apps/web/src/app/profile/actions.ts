@@ -208,3 +208,15 @@ export async function setEmailNotifications(
   revalidatePath("/profile");
   return { ok: true };
 }
+
+export async function setPushNotifications(
+  enabled: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch("/api/v1/notifications/preferences", {
+    method: "PUT",
+    body: JSON.stringify({ pushEnabled: enabled }),
+  });
+  if (!res.ok) return { ok: false, error: `알림 설정 저장 실패 (HTTP ${res.status})` };
+  revalidatePath("/profile");
+  return { ok: true };
+}

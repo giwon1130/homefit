@@ -23,8 +23,10 @@ class D1NotificationJob(
             .onSuccess {
                 if (it.candidates > 0) {
                     log.info(
-                        "d1 dispatch ok candidates={} sent={} failed={} skipped={}",
-                        it.candidates, it.sent, it.failed, it.skipped,
+                        "d1 dispatch ok candidates={} email(sent={}/failed={}/skipped={}) push(sent={}/failed={}/skipped={})",
+                        it.candidates,
+                        it.emailSent, it.emailFailed, it.emailSkipped,
+                        it.pushSent, it.pushFailed, it.pushSkipped,
                     )
                 }
             }

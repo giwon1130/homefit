@@ -76,4 +76,19 @@ class JdbcUserRepository(
             MapSqlParameterSource().addValue("id", userId).addValue("v", enabled),
         )
     }
+
+    override fun isPushNotificationsEnabled(userId: Long): Boolean {
+        return jdbc.queryForObject(
+            "SELECT notification_push_enabled FROM users WHERE id = :id",
+            MapSqlParameterSource("id", userId),
+            Boolean::class.java,
+        ) ?: true
+    }
+
+    override fun setPushNotificationsEnabled(userId: Long, enabled: Boolean) {
+        jdbc.update(
+            "UPDATE users SET notification_push_enabled = :v WHERE id = :id",
+            MapSqlParameterSource().addValue("id", userId).addValue("v", enabled),
+        )
+    }
 }
