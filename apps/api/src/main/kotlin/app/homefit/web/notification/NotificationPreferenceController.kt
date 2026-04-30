@@ -17,12 +17,20 @@ import org.springframework.web.bind.annotation.RestController
 class NotificationPreferenceController(
     private val users: UserRepository,
 ) {
-    data class PreferenceResponse(val emailEnabled: Boolean)
-    data class PreferenceUpdate(val emailEnabled: Boolean)
+    data class PreferenceResponse(val emailEnabled: Boolean, val pushEnabled: Boolean)
+
+    /** PUT 시 둘 중 한쪽만 보내도 되도록 nullable. null 이면 변경 안 함. */
+    data class PreferenceUpdate(
+        val emailEnabled: Boolean? = null,
+        val pushEnabled: Boolean? = null,
+    )
 
     @GetMapping
     fun get(@CurrentUserId userId: Long): PreferenceResponse {
-        return PreferenceResponse(users.isEmailNotificationsEnabled(userId))
+        return PreferenceResponse(
+            emailEnabled = users.isEmailNotificationsEnabled(userId),
+            pushEnabled = users.isPushNotificationsEnabled(userId),
+        )
     }
 
     @PutMapping
@@ -30,7 +38,11 @@ class NotificationPreferenceController(
         @CurrentUserId userId: Long,
         @RequestBody body: PreferenceUpdate,
     ): PreferenceResponse {
-        users.setEmailNotificationsEnabled(userId, body.emailEnabled)
-        return PreferenceResponse(body.emailEnabled)
+        body.emailEnabled?.let { users.setEmailNotificationsEnabled(userId, it) }
+        body.pushEnabled?.let { users.setPushNotificationsEnabled(userId, it) }
+        return PreferenceResponse(
+            emailEnabled = users.isEmailNotificationsEnabled(userId),
+            pushEnabled = users.isPushNotificationsEnabled(userId),
+        )
     }
 }

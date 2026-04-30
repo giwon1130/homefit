@@ -114,18 +114,24 @@ export function wonToMan(n?: number | null): string {
 
 // ---- notification preferences ----
 
-export async function fetchNotificationPref(): Promise<boolean> {
-  const res = await apiFetch("/api/v1/notifications/preferences");
-  if (!res.ok) return true;
-  const data = (await res.json()) as { emailEnabled: boolean };
-  return data.emailEnabled;
+export interface NotificationPref {
+  emailEnabled: boolean;
+  pushEnabled: boolean;
 }
 
-export async function setNotificationPref(emailEnabled: boolean): Promise<SaveResult> {
+export async function fetchNotificationPref(): Promise<NotificationPref> {
+  const res = await apiFetch("/api/v1/notifications/preferences");
+  if (!res.ok) return { emailEnabled: true, pushEnabled: true };
+  return (await res.json()) as NotificationPref;
+}
+
+export async function setNotificationPref(
+  patch: Partial<NotificationPref>,
+): Promise<SaveResult> {
   try {
     const res = await apiFetch("/api/v1/notifications/preferences", {
       method: "PUT",
-      body: JSON.stringify({ emailEnabled }),
+      body: JSON.stringify(patch),
     });
     if (!res.ok) return { ok: false, error: `알림 설정 저장 실패 (${res.status})` };
     return { ok: true };

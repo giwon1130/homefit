@@ -34,6 +34,7 @@ import {
   wonToEok,
   wonToMan,
 } from "@/lib/profile";
+import { registerPushToken } from "@/lib/push";
 
 const RELATION_LABEL: Record<HouseholdRelation, string> = {
   SPOUSE: "배우자",
@@ -190,13 +191,15 @@ export default function ProfileEditScreen() {
     preferredSidos: [],
   });
   const [emailNotif, setEmailNotif] = useState<boolean>(true);
+  const [pushNotif, setPushNotif] = useState<boolean>(true);
   const [notifSaving, setNotifSaving] = useState(false);
 
   useEffect(() => {
     void (async () => {
       const [data, pref] = await Promise.all([fetchProfile(), fetchNotificationPref()]);
       if (data) hydrate(data);
-      setEmailNotif(pref);
+      setEmailNotif(pref.emailEnabled);
+      setPushNotif(pref.pushEnabled);
       setLoading(false);
     })();
   }, []);
@@ -204,11 +207,25 @@ export default function ProfileEditScreen() {
   const toggleEmailNotif = async (next: boolean) => {
     setEmailNotif(next);
     setNotifSaving(true);
-    const r = await setNotificationPref(next);
+    const r = await setNotificationPref({ emailEnabled: next });
     setNotifSaving(false);
     if (!r.ok) {
       setEmailNotif(!next);
       setError(r.error);
+    }
+  };
+
+  const togglePushNotif = async (next: boolean) => {
+    setPushNotif(next);
+    setNotifSaving(true);
+    const r = await setNotificationPref({ pushEnabled: next });
+    setNotifSaving(false);
+    if (!r.ok) {
+      setPushNotif(!next);
+      setError(r.error);
+    } else if (next) {
+      // ON 으로 켰는데 토큰이 없을 수도 있으니 등록 시도 (권한이 거부된 상태면 no-op).
+      void registerPushToken();
     }
   };
 
@@ -645,8 +662,25 @@ export default function ProfileEditScreen() {
 
         <Section title="알림">
           <Text style={styles.muted}>
-            즐겨찾기한 청약의 접수 마감 1일 전 이메일로 알려드려요.
+            즐겨찾기한 청약의 접수 마감 1일 전 알려드려요. 푸시는 즉각, 이메일은 기록용.
           </Text>
+          <View style={styles.toggleRow}>
+            <Text style={{ fontSize: 14, color: "#0a0a0a" }}>D-1 푸시 알림</Text>
+            <Pressable
+              onPress={() => void togglePushNotif(!pushNotif)}
+              disabled={notifSaving}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: pushNotif }}
+              style={[styles.toggleTrack, pushNotif ? styles.toggleOn : styles.toggleOff]}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  pushNotif ? styles.toggleThumbOn : styles.toggleThumbOff,
+                ]}
+              />
+            </Pressable>
+          </View>
           <View style={styles.toggleRow}>
             <Text style={{ fontSize: 14, color: "#0a0a0a" }}>D-1 이메일 알림</Text>
             <Pressable

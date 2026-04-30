@@ -18,8 +18,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
+    "notification": {
+      "iosDisplayInForeground": true
+    },
     "extra": {
       "apiBaseUrl": "https://api-production-1d45.up.railway.app",
       "googleClientId": ""

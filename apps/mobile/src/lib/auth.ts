@@ -3,6 +3,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import { useEffect } from "react";
+import { registerPushToken, unregisterPushToken } from "./push";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -25,6 +26,8 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 export async function clearTokens(): Promise<void> {
+  // 푸시 토큰을 먼저 백엔드에서 제거 (인증 헤더 살아있을 때) → 그 다음 로컬 토큰 삭제.
+  await unregisterPushToken();
   await SecureStore.deleteItemAsync(ACCESS_KEY);
   await SecureStore.deleteItemAsync(REFRESH_KEY);
   await SecureStore.deleteItemAsync(USER_KEY);
@@ -67,6 +70,8 @@ export function useGoogleSignIn(onSuccess?: () => void) {
       await SecureStore.setItemAsync(ACCESS_KEY, data.accessToken);
       await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user));
+      // 토큰 등록은 best-effort — 실패해도 로그인 자체는 진행.
+      void registerPushToken();
       onSuccess?.();
     })();
   }, [response, onSuccess]);

@@ -24,9 +24,9 @@ export default async function ProfilePage() {
   }
   const profile: FullProfile = await profileRes.json();
   const score: ScoreResp | null = scoreRes.ok ? await scoreRes.json() : null;
-  const notifPref: { emailEnabled: boolean } = notifRes.ok
+  const notifPref: { emailEnabled: boolean; pushEnabled: boolean } = notifRes.ok
     ? await notifRes.json()
-    : { emailEnabled: true };
+    : { emailEnabled: true, pushEnabled: true };
 
   return (
     <div className="space-y-6">
@@ -39,7 +39,10 @@ export default async function ProfilePage() {
 
       {score && <ScoreCard score={score} />}
       {profile.incomes.length > 0 && <IncomeTrend incomes={profile.incomes} />}
-      <NotificationPreferences initialEmailEnabled={notifPref.emailEnabled} />
+      <NotificationPreferences
+        initialEmailEnabled={notifPref.emailEnabled}
+        initialPushEnabled={notifPref.pushEnabled}
+      />
 
       <ProfileForm
         initialCore={profile.core}

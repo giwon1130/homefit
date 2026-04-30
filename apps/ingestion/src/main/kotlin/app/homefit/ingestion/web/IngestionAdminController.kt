@@ -95,9 +95,8 @@ class IngestionAdminController(
         val r = notifications.dispatchD1()
         return mapOf(
             "candidates" to r.candidates,
-            "sent" to r.sent,
-            "failed" to r.failed,
-            "skipped" to r.skipped,
+            "email" to mapOf("sent" to r.emailSent, "failed" to r.emailFailed, "skipped" to r.emailSkipped),
+            "push" to mapOf("sent" to r.pushSent, "failed" to r.pushFailed, "skipped" to r.pushSkipped),
         )
     }
 
