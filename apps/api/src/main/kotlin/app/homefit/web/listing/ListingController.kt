@@ -30,8 +30,12 @@ class ListingController(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         @RequestParam(defaultValue = "CLOSING") sort: ListingQuery.Sort,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) maxPriceKrw: Long?,
+        @RequestParam(required = false) minSizeM2: java.math.BigDecimal?,
+        @RequestParam(required = false) maxSizeM2: java.math.BigDecimal?,
     ): ListingPageResponse {
-        val q = ListingQuery(
+        val query = ListingQuery(
             sido = sido?.takeIf { it.isNotBlank() },
             sigungu = sigungu?.takeIf { it.isNotBlank() },
             types = type.orEmpty(),
@@ -39,8 +43,12 @@ class ListingController(
             page = page.coerceAtLeast(0),
             size = size.coerceIn(1, 100),
             sort = sort,
+            q = q?.trim()?.takeIf { it.isNotEmpty() },
+            maxPriceKrw = maxPriceKrw?.takeIf { it > 0 },
+            minSizeM2 = minSizeM2,
+            maxSizeM2 = maxSizeM2,
         )
-        return ListingPageResponse.from(service.search(q))
+        return ListingPageResponse.from(service.search(query))
     }
 
     @GetMapping("/{id}")

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { apiFetch, type ListingPage, type ListingType } from "@/lib/api";
+import SearchControls from "./SearchControls";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,14 @@ const TYPE_OPTIONS: ListingType[] = [
   "NATIONAL_RENTAL",
 ];
 
+const SORT_OPTIONS: Array<{ v: string; label: string }> = [
+  { v: "CLOSING", label: "마감 임박순" },
+  { v: "ANNOUNCEMENT", label: "최근 공고순" },
+  { v: "MOVE_IN", label: "입주 빠른 순" },
+  { v: "PRICE_LOW", label: "분양가 낮은 순" },
+  { v: "PRICE_HIGH", label: "분양가 높은 순" },
+];
+
 type SearchParamValue = string | string[] | undefined;
 type Props = { searchParams: Promise<Record<string, SearchParamValue>> };
 
@@ -54,11 +63,23 @@ function pickAll(v: SearchParamValue): string[] {
   return Array.isArray(v) ? v : [v];
 }
 
-function buildQuery(params: { sido?: string; types?: string[]; page?: number }): string {
+interface FilterState {
+  sido?: string;
+  types?: string[];
+  q?: string;
+  maxPriceEok?: string;
+  sort?: string;
+  page?: number;
+}
+
+function buildQuery(p: FilterState): string {
   const u = new URLSearchParams();
-  if (params.sido) u.set("sido", params.sido);
-  for (const t of params.types ?? []) u.append("type", t);
-  if (params.page) u.set("page", params.page.toString());
+  if (p.sido) u.set("sido", p.sido);
+  for (const t of p.types ?? []) u.append("type", t);
+  if (p.q) u.set("q", p.q);
+  if (p.maxPriceEok) u.set("maxPriceEok", p.maxPriceEok);
+  if (p.sort && p.sort !== "CLOSING") u.set("sort", p.sort);
+  if (p.page) u.set("page", p.page.toString());
   return u.toString();
 }
 
@@ -66,16 +87,25 @@ export default async function HomePage({ searchParams }: Props) {
   const sp = await searchParams;
   const sido = pickFirst(sp.sido);
   const types = pickAll(sp.type);
+  const q = pickFirst(sp.q);
+  const maxPriceEok = pickFirst(sp.maxPriceEok);
+  const sort = pickFirst(sp.sort) ?? "CLOSING";
 
   // 백엔드 호출
   const apiParams = new URLSearchParams();
   apiParams.set("size", "30");
-  apiParams.set("sort", "CLOSING");
+  apiParams.set("sort", sort);
   if (sido) {
-    // backend 의 sido 컬럼은 '서울특별시' 등 풀네임. 사용자가 '서울' 입력 → prefix 매칭은 안 되므로 매핑.
     apiParams.set("sido", sidoFullName(sido));
   }
   for (const t of types) apiParams.append("type", t);
+  if (q && q.trim()) apiParams.set("q", q.trim());
+  if (maxPriceEok) {
+    const eok = Number(maxPriceEok);
+    if (Number.isFinite(eok) && eok > 0) {
+      apiParams.set("maxPriceKrw", Math.round(eok * 100_000_000).toString());
+    }
+  }
 
   const res = await apiFetch(`/api/v1/listings?${apiParams.toString()}`);
   if (!res.ok) {
@@ -99,18 +129,28 @@ export default async function HomePage({ searchParams }: Props) {
         <span className="text-sm text-zinc-500">총 {page.total}건</span>
       </div>
 
+      {/* 검색 + 가격대 + 정렬 (클라이언트 form) */}
+      <SearchControls
+        initialQ={q ?? ""}
+        initialMaxPriceEok={maxPriceEok ?? ""}
+        initialSort={sort}
+        sortOptions={SORT_OPTIONS}
+        sido={sido}
+        types={types}
+      />
+
       {/* 시도 필터 */}
       <div className="space-y-2">
         <div className="text-xs font-medium text-zinc-600">지역</div>
         <div className="flex flex-wrap gap-2">
-          <ChipLink active={!sido} href={`/?${buildQuery({ types })}`}>
+          <ChipLink active={!sido} href={`/?${buildQuery({ types, q, maxPriceEok, sort })}`}>
             전체
           </ChipLink>
           {SIDO_OPTIONS.map((s) => (
             <ChipLink
               key={s}
               active={sido === s}
-              href={`/?${buildQuery({ sido: sido === s ? undefined : s, types })}`}
+              href={`/?${buildQuery({ sido: sido === s ? undefined : s, types, q, maxPriceEok, sort })}`}
             >
               {s}
             </ChipLink>
@@ -122,7 +162,7 @@ export default async function HomePage({ searchParams }: Props) {
       <div className="space-y-2">
         <div className="text-xs font-medium text-zinc-600">공급 유형</div>
         <div className="flex flex-wrap gap-2">
-          <ChipLink active={types.length === 0} href={`/?${buildQuery({ sido })}`}>
+          <ChipLink active={types.length === 0} href={`/?${buildQuery({ sido, q, maxPriceEok, sort })}`}>
             전체
           </ChipLink>
           {TYPE_OPTIONS.map((t) => {
@@ -132,7 +172,7 @@ export default async function HomePage({ searchParams }: Props) {
               <ChipLink
                 key={t}
                 active={isOn}
-                href={`/?${buildQuery({ sido, types: next })}`}
+                href={`/?${buildQuery({ sido, types: next, q, maxPriceEok, sort })}`}
               >
                 {LISTING_TYPE_LABEL[t]}
               </ChipLink>

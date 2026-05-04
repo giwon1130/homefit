@@ -61,6 +61,14 @@ data class ListingQuery(
     val page: Int = 0,
     val size: Int = 20,
     val sort: Sort = Sort.CLOSING,
+    /** 단지명/주소 부분 일치 (대소문자 무시). null/빈문자열 → 미적용. */
+    val q: String? = null,
+    /** 최저 분양가 한도 — 어떤 unit 의 priceMaxKrw 가 이 값 이하면 매치. */
+    val maxPriceKrw: Long? = null,
+    /** 최저 면적 — 어떤 unit 의 sizeM2 가 이 값 이상이면 매치. */
+    val minSizeM2: java.math.BigDecimal? = null,
+    /** 최대 면적 — 어떤 unit 의 sizeM2 가 이 값 이하면 매치. */
+    val maxSizeM2: java.math.BigDecimal? = null,
 ) {
-    enum class Sort { CLOSING, ANNOUNCEMENT, MOVE_IN, MATCH }
+    enum class Sort { CLOSING, ANNOUNCEMENT, MOVE_IN, MATCH, PRICE_LOW, PRICE_HIGH }
 }
