@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Link, useFocusEffect } from "expo-router";
@@ -37,6 +38,15 @@ function daysUntil(iso?: string): string {
   return `D-${diff}`;
 }
 
+type SortKey = "CLOSING" | "ANNOUNCEMENT" | "MOVE_IN" | "PRICE_LOW" | "PRICE_HIGH";
+const SORT_OPTIONS: Array<{ v: SortKey; label: string }> = [
+  { v: "CLOSING", label: "마감 임박순" },
+  { v: "ANNOUNCEMENT", label: "최근 공고순" },
+  { v: "MOVE_IN", label: "입주 빠른 순" },
+  { v: "PRICE_LOW", label: "분양가↑" },
+  { v: "PRICE_HIGH", label: "분양가↓" },
+];
+
 export default function ListingsTab() {
   const [items, setItems] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,15 +54,19 @@ export default function ListingsTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [sido, setSido] = useState<string | null>(null);
   const [type, setType] = useState<ListingType | null>(null);
+  const [q, setQ] = useState("");
+  const [appliedQ, setAppliedQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("CLOSING");
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
     p.set("size", "30");
-    p.set("sort", "CLOSING");
+    p.set("sort", sort);
     if (sido) p.set("sido", sido);
     if (type) p.set("type", type);
+    if (appliedQ.trim()) p.set("q", appliedQ.trim());
     return p.toString();
-  }, [sido, type]);
+  }, [sido, type, appliedQ, sort]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -77,6 +91,44 @@ export default function ListingsTab() {
 
   const Header = (
     <View style={styles.filters}>
+      <View style={styles.searchRow}>
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          onSubmitEditing={() => setAppliedQ(q)}
+          placeholder="단지명/주소 검색"
+          placeholderTextColor="#a1a1aa"
+          returnKeyType="search"
+          autoCorrect={false}
+          autoCapitalize="none"
+          style={styles.searchInput}
+        />
+        {appliedQ && (
+          <Pressable
+            onPress={() => {
+              setQ("");
+              setAppliedQ("");
+            }}
+            style={styles.clearBtn}
+          >
+            <Text style={styles.clearBtnText}>×</Text>
+          </Pressable>
+        )}
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {SORT_OPTIONS.map((o) => (
+          <Chip
+            key={o.v}
+            label={o.label}
+            active={sort === o.v}
+            onPress={() => setSort(o.v)}
+          />
+        ))}
+      </ScrollView>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -195,6 +247,23 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 12 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   filters: { gap: 8, marginBottom: 4 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  searchInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d4d4d8",
+    backgroundColor: "white",
+    paddingHorizontal: 14,
+    fontSize: 14,
+  },
+  clearBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#e4e4e7",
+  },
+  clearBtnText: { fontSize: 18, color: "#52525b", lineHeight: 18 },
   chipsRow: { gap: 6, paddingRight: 16 },
   chip: {
     paddingHorizontal: 12,
