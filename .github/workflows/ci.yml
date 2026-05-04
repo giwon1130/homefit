@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# dorny/paths-filter 가 PR 파일 목록을 GitHub API 로 조회 → pull-requests: read 필요.
+permissions:
+  contents: read
+  pull-requests: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
