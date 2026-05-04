@@ -64,6 +64,7 @@ class MatchingService(
         val history = profile.findHousingHistory(userId)
         val prefs = profile.findPreferences(userId) ?: Preferences()
         val workplaces = profile.findWorkplaces(userId)
+        val assets = profile.findAssets(userId)   // v2: budget DSR 검증용
 
         val commuteLookup: (Pair<java.math.BigDecimal, java.math.BigDecimal>, Pair<java.math.BigDecimal, java.math.BigDecimal>) -> Int? =
             { origin, dest -> commute.get(origin.first, origin.second, dest.first, dest.second)?.totalMinutes }
@@ -71,7 +72,11 @@ class MatchingService(
         val scored = all.content.map { l ->
             MatchedListing(
                 listing = l,
-                score = calculator.calculate(l, unitMap[l.id].orEmpty(), core, members, incomes, history, prefs, workplaces, commuteLookup),
+                score = calculator.calculate(
+                    l, unitMap[l.id].orEmpty(), core, members, incomes, history, prefs, workplaces,
+                    assets = assets,
+                    commuteLookup = commuteLookup,
+                ),
             )
         }.sortedByDescending { it.score.total }
 

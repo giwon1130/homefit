@@ -134,6 +134,74 @@ class MatchingScoreCalculatorTest {
     }
 
     @Test
+    fun `예산 OK이지만 소득·자산 부족하면 budget 점수 페널티`() {
+        // 한도 10억 (사용자 설정), 분양가 8억 → 일반 케이스라면 25점.
+        // 소득 5천만/년 (DSR 40% → 연 2천만 신규 상환 가능) + monthlyDebt 0 + netWorth 1억
+        // → 1억 한도 + 자기 1억 = 2억. 분양가 8억 대비 6억 부족 → -10
+        val score = calculator.calculate(
+            listing = listing("서울특별시"),
+            units = listOf(unit(800_000_000L)),
+            core = ProfileCore(),
+            members = emptyList(),
+            incomes = listOf(Income(2025, 50_000_000L, null)),
+            history = emptyList(),
+            preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
+            assets = app.homefit.domain.profile.Assets(
+                netWorth = 100_000_000L,
+                realEstate = 0L,
+                monthlyDebt = 0L,
+            ),
+        )
+        assertThat(score.budget).isEqualTo(15)  // 25 - 10
+        assertThat(score.notes.any { it.contains("자금조달 한계") }).isTrue()
+    }
+
+    @Test
+    fun `소득 자산 충분하면 budget 페널티 없음`() {
+        val score = calculator.calculate(
+            listing = listing("서울특별시"),
+            units = listOf(unit(500_000_000L)),
+            core = ProfileCore(),
+            members = emptyList(),
+            incomes = listOf(Income(2025, 200_000_000L, 100_000_000L)),  // 가구 3억
+            history = emptyList(),
+            preferences = Preferences(maxPurchasePrice = 1_000_000_000L, preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
+            assets = app.homefit.domain.profile.Assets(
+                netWorth = 500_000_000L,
+                realEstate = 0L,
+                monthlyDebt = 0L,
+            ),
+        )
+        assertThat(score.budget).isEqualTo(25)
+    }
+
+    @Test
+    fun `region 시도 약식 표기 정규화 (강원도 ↔ 강원특별자치도)`() {
+        val score = calculator.calculate(
+            listing = listing("강원도"),
+            units = listOf(unit(500_000_000L)),
+            core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
+            preferences = Preferences(preferredSidos = listOf("강원특별자치도")),
+            workplaces = emptyList(),
+        )
+        assertThat(score.region).isEqualTo(20)
+    }
+
+    @Test
+    fun `region 풀네임 vs 약식 매칭 (서울 ↔ 서울특별시)`() {
+        val score = calculator.calculate(
+            listing = listing("서울특별시"),
+            units = listOf(unit(500_000_000L)),
+            core = ProfileCore(), members = emptyList(), incomes = emptyList(), history = emptyList(),
+            preferences = Preferences(preferredSidos = listOf("서울")),
+            workplaces = emptyList(),
+        )
+        assertThat(score.region).isEqualTo(20)
+    }
+
+    @Test
     fun `통근 90분 초과면 0점`() {
         val score = calculator.calculate(
             listing = listing("서울특별시").copy(latitude = BigDecimal("37.5"), longitude = BigDecimal("127.0")),
