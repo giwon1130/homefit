@@ -179,21 +179,21 @@ data class ScoreResponse(
     val notes: List<String>,
 ) {
     data class BreakdownDto(
-        val noHomePeriod: Points,
-        val dependents: Points,
-        val accountAge: Points,
+        val noHomePeriod: Item,
+        val dependents: Item,
+        val accountAge: Item,
     )
 
-    data class Points(val points: Int, val max: Int)
+    data class Item(val points: Int, val max: Int, val reason: String)
 
     companion object {
         fun from(s: ScoreBreakdown) = ScoreResponse(
             total = s.total,
             max = ScoreBreakdown.MAX_TOTAL,
             breakdown = BreakdownDto(
-                noHomePeriod = Points(s.noHomePeriodPoints, ScoreBreakdown.MAX_NO_HOME),
-                dependents = Points(s.dependentsPoints, ScoreBreakdown.MAX_DEPENDENTS),
-                accountAge = Points(s.accountAgePoints, ScoreBreakdown.MAX_ACCOUNT),
+                noHomePeriod = Item(s.noHomePeriod.points, s.noHomePeriod.max, s.noHomePeriod.reason),
+                dependents = Item(s.dependents.points, s.dependents.max, s.dependents.reason),
+                accountAge = Item(s.accountAge.points, s.accountAge.max, s.accountAge.reason),
             ),
             notes = s.notes,
         )

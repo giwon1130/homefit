@@ -108,9 +108,9 @@ function IncomeTrend({ incomes }: { incomes: Income[] }) {
 
 function ScoreCard({ score }: { score: ScoreResp }) {
   const items = [
-    { label: "무주택기간", ...score.breakdown.noHomePeriod },
-    { label: "부양가족", ...score.breakdown.dependents },
-    { label: "청약통장", ...score.breakdown.accountAge },
+    { label: "무주택기간", item: score.breakdown.noHomePeriod },
+    { label: "부양가족", item: score.breakdown.dependents },
+    { label: "청약통장", item: score.breakdown.accountAge },
   ];
   return (
     <section className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -121,15 +121,28 @@ function ScoreCard({ score }: { score: ScoreResp }) {
           <span className="text-sm text-zinc-500"> / {score.max}</span>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {items.map((it) => (
-          <div key={it.label} className="rounded bg-white p-2 text-center">
-            <div className="text-xs text-zinc-500">{it.label}</div>
-            <div className="mt-1 text-sm font-semibold">
-              {it.points} <span className="text-zinc-400">/ {it.max}</span>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {items.map(({ label, item }) => {
+          const pct = item.max > 0 ? Math.round((item.points / item.max) * 100) : 0;
+          return (
+            <div key={label} className="rounded bg-white p-3">
+              <div className="flex items-baseline justify-between">
+                <div className="text-xs text-zinc-500">{label}</div>
+                <div className="text-sm font-semibold">
+                  {item.points}
+                  <span className="text-zinc-400"> / {item.max}</span>
+                </div>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded bg-zinc-100">
+                <div
+                  className="h-full bg-blue-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs leading-snug text-zinc-600">{item.reason}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {score.notes.length > 0 && (
         <ul className="mt-3 list-disc pl-5 text-xs text-zinc-600">

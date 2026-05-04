@@ -211,13 +211,19 @@ export interface MatchedListingPage {
   total: number;
 }
 
+export interface ScoreItem {
+  points: number;
+  max: number;
+  reason: string;
+}
+
 export interface ScoreResp {
   total: number;
   max: number;
   breakdown: {
-    noHomePeriod: { points: number; max: number };
-    dependents: { points: number; max: number };
-    accountAge: { points: number; max: number };
+    noHomePeriod: ScoreItem;
+    dependents: ScoreItem;
+    accountAge: ScoreItem;
   };
   notes: string[];
 }
