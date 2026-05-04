@@ -35,6 +35,27 @@ function formatKrw(n?: number | null) {
   return `${n.toLocaleString()}원`;
 }
 
+function dayDelta(iso?: string): { label: string; tone: "urgent" | "soon" | "normal" | "past" } | null {
+  if (!iso) return null;
+  const d = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  if (d < 0) return { label: "지남", tone: "past" };
+  if (d === 0) return { label: "오늘", tone: "urgent" };
+  return { label: `D-${d}`, tone: d <= 3 ? "urgent" : d <= 14 ? "soon" : "normal" };
+}
+
+function pyungPriceMan(price?: number | null, sizeM2?: number | null): number | null {
+  if (price == null || sizeM2 == null || sizeM2 <= 0) return null;
+  const pyung = sizeM2 * 0.3025;
+  return Math.round(price / pyung / 10_000);
+}
+
+const RENTAL_TYPES = new Set([
+  "HAPPY_HOUSE",
+  "PURCHASE_RENTAL",
+  "JEONSE_RENTAL",
+  "NATIONAL_RENTAL",
+]);
+
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<ListingDetail | null>(null);
@@ -113,6 +134,8 @@ export default function ListingDetailScreen() {
         )}
       </View>
       <Text style={styles.muted}>{data.address}</Text>
+
+      <DDayStrip listing={data} />
 
       {eligibility && (
         <View style={styles.eligibilityCard}>
@@ -193,27 +216,36 @@ export default function ListingDetailScreen() {
       {data.units.length > 0 && (
         <View>
           <Text style={styles.sectionTitle}>공급 유형</Text>
-          {data.units.map((u) => (
-            <View key={u.id} style={styles.unitRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.unitType}>{u.unitType ?? "-"}</Text>
-                <Text style={styles.unitMeta}>
-                  {u.sizeM2 ? `${u.sizeM2}㎡` : "-"} · {u.supplyCount ?? "-"}세대
-                </Text>
+          {data.units.map((u) => {
+            const isRental = RENTAL_TYPES.has(data.listingType);
+            const pp = pyungPriceMan(u.priceMaxKrw, u.sizeM2);
+            return (
+              <View key={u.id} style={styles.unitRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.unitType}>{u.unitType ?? "-"}</Text>
+                  <Text style={styles.unitMeta}>
+                    {u.sizeM2 ? `${u.sizeM2}㎡` : "-"} · {u.supplyCount ?? "-"}세대
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  {!isRental && u.priceMaxKrw ? (
+                    <>
+                      <Text style={styles.unitPrice}>{formatKrw(u.priceMaxKrw)}</Text>
+                      {pp != null && (
+                        <Text style={styles.unitMeta}>평당 {pp.toLocaleString()}만원</Text>
+                      )}
+                    </>
+                  ) : null}
+                  {isRental && u.depositAmount ? (
+                    <Text style={styles.unitMeta}>보증금 {formatKrw(u.depositAmount)}</Text>
+                  ) : null}
+                  {isRental && u.monthlyRent ? (
+                    <Text style={styles.unitMeta}>월 {formatKrw(u.monthlyRent)}</Text>
+                  ) : null}
+                </View>
               </View>
-              <View style={{ alignItems: "flex-end" }}>
-                {u.priceMaxKrw ? (
-                  <Text style={styles.unitPrice}>{formatKrw(u.priceMaxKrw)}</Text>
-                ) : null}
-                {u.depositAmount ? (
-                  <Text style={styles.unitMeta}>보증금 {formatKrw(u.depositAmount)}</Text>
-                ) : null}
-                {u.monthlyRent ? (
-                  <Text style={styles.unitMeta}>월 {formatKrw(u.monthlyRent)}</Text>
-                ) : null}
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
 
@@ -234,6 +266,44 @@ function Field({ label, value }: { label: string; value: string }) {
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
+
+function DDayStrip({ listing }: { listing: ListingDetail }) {
+  const items = [
+    { label: "접수 마감", iso: listing.applicationEnd },
+    { label: "당첨 발표", iso: listing.winnerAnnouncementDate },
+    { label: "입주예정", iso: listing.moveInDate },
+  ];
+  const deltas = items.map((i) => ({ ...i, delta: dayDelta(i.iso) }));
+  if (!deltas.some((d) => d.delta != null)) return null;
+  return (
+    <View style={styles.ddayStrip}>
+      {deltas.map((d) => {
+        const tone = d.delta?.tone ?? "past";
+        const wrapStyle = [
+          styles.ddayCard,
+          tone === "urgent" && styles.ddayUrgent,
+          tone === "soon" && styles.ddaySoon,
+          tone === "past" && styles.ddayPast,
+        ];
+        const labelStyle = [
+          styles.ddayLabel,
+          tone === "urgent" && { color: "#b91c1c" },
+          tone === "soon" && { color: "#b45309" },
+          tone === "past" && { color: "#a1a1aa" },
+        ];
+        return (
+          <View key={d.label} style={wrapStyle}>
+            <Text style={styles.ddayHead}>{d.label}</Text>
+            <Text style={labelStyle}>{d.delta?.label ?? "-"}</Text>
+            <Text style={styles.ddayDate}>
+              {d.iso ? new Date(d.iso).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "-"}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -260,6 +330,23 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: "600" },
   cardSubtitle: { fontSize: 13, color: "#1e40af" },
   subCard: { backgroundColor: "white", padding: 10, borderRadius: 6 },
+
+  ddayStrip: { flexDirection: "row", gap: 8 },
+  ddayCard: {
+    flex: 1,
+    backgroundColor: "white",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e4e4e7",
+    padding: 10,
+    alignItems: "flex-start",
+  },
+  ddayUrgent: { backgroundColor: "#fef2f2", borderColor: "#fecaca" },
+  ddaySoon: { backgroundColor: "#fffbeb", borderColor: "#fde68a" },
+  ddayPast: { opacity: 0.5 },
+  ddayHead: { fontSize: 11, color: "#71717a" },
+  ddayLabel: { fontSize: 22, fontWeight: "700", marginTop: 2 },
+  ddayDate: { fontSize: 11, color: "#a1a1aa", marginTop: 2 },
 
   fieldGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   field: { width: "48%", backgroundColor: "white", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#e4e4e7" },
