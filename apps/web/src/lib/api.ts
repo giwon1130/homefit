@@ -73,6 +73,8 @@ export interface UnitResp {
   sizeM2?: number;
   supplyCount?: number;
   priceMaxKrw?: number;
+  depositAmount?: number;     // 임대용 보증금
+  monthlyRent?: number;       // 임대용 월세
 }
 
 export interface ListingDetail extends ListingSummary {

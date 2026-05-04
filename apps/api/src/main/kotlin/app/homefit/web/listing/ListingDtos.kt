@@ -62,9 +62,14 @@ data class UnitResponse(
     val sizeM2: BigDecimal?,
     val supplyCount: Int?,
     val priceMaxKrw: Long?,
+    val depositAmount: Long?,
+    val monthlyRent: Int?,
 ) {
     companion object {
-        fun from(u: ListingUnit) = UnitResponse(u.id, u.modelNo, u.unitType, u.sizeM2, u.supplyCount, u.priceMaxKrw)
+        fun from(u: ListingUnit) = UnitResponse(
+            u.id, u.modelNo, u.unitType, u.sizeM2, u.supplyCount, u.priceMaxKrw,
+            u.depositAmount, u.monthlyRent,
+        )
     }
 }
 

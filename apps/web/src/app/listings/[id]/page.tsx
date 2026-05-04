@@ -63,6 +63,33 @@ function formatKrw(n?: number) {
   return `${n.toLocaleString()}원`;
 }
 
+/** "D-3" / "오늘" / "마감" 형태로 환산. iso 가 없으면 null. */
+function dayDelta(iso?: string): { label: string; tone: "urgent" | "soon" | "normal" | "past" } | null {
+  if (!iso) return null;
+  const diffDays = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  if (diffDays < 0) return { label: "지남", tone: "past" };
+  if (diffDays === 0) return { label: "오늘", tone: "urgent" };
+  const tone = diffDays <= 3 ? "urgent" : diffDays <= 14 ? "soon" : "normal";
+  return { label: `D-${diffDays}`, tone };
+}
+
+/** 1m² → 0.3025평. priceMaxKrw 와 sizeM2 모두 있으면 평당가 (만원 단위) 계산. */
+function pyungPriceMan(price?: number, sizeM2?: number | string): number | null {
+  if (price == null || sizeM2 == null) return null;
+  const m2 = typeof sizeM2 === "string" ? Number(sizeM2) : sizeM2;
+  if (!Number.isFinite(m2) || m2 <= 0) return null;
+  const pyung = m2 * 0.3025;
+  return Math.round(price / pyung / 10_000);
+}
+
+/** 임대 유형 — 분양가 대신 보증금/월세 위주로 표시. */
+const RENTAL_TYPES = new Set([
+  "HAPPY_HOUSE",
+  "PURCHASE_RENTAL",
+  "JEONSE_RENTAL",
+  "NATIONAL_RENTAL",
+]);
+
 type Props = { params: Promise<{ id: string }> };
 
 export default async function ListingDetailPage({ params }: Props) {
@@ -125,6 +152,9 @@ export default async function ListingDetailPage({ params }: Props) {
           <p className="text-sm text-zinc-500">시행/시공: {listing.developer}</p>
         )}
       </header>
+
+      <DDayStrip listing={listing} />
+      <SummaryCard listing={listing} />
 
       {listing.latitude != null && listing.longitude != null && (
         <section>
@@ -206,33 +236,7 @@ export default async function ListingDetailPage({ params }: Props) {
       {loan && <LoanCard loan={loan} />}
 
       {listing.units.length > 0 && (
-        <section>
-          <h2 className="mb-2 font-semibold">공급 유형별</h2>
-          <div className="overflow-hidden rounded-lg border border-zinc-200">
-            <table className="w-full text-sm">
-              <thead className="bg-zinc-50 text-xs text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2 text-left">주택형</th>
-                  <th className="px-3 py-2 text-right">면적</th>
-                  <th className="px-3 py-2 text-right">공급세대</th>
-                  <th className="px-3 py-2 text-right">최고분양가</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listing.units.map((u) => (
-                  <tr key={u.id} className="border-t border-zinc-100">
-                    <td className="px-3 py-2">{u.unitType ?? "-"}</td>
-                    <td className="px-3 py-2 text-right">
-                      {u.sizeM2 ? `${u.sizeM2}㎡` : "-"}
-                    </td>
-                    <td className="px-3 py-2 text-right">{u.supplyCount ?? "-"}</td>
-                    <td className="px-3 py-2 text-right">{formatKrw(u.priceMaxKrw)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <UnitsTable listing={listing} />
       )}
 
       {listing.documentUrl && (
@@ -255,6 +259,215 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="text-xs text-zinc-500">{label}</div>
       <div className="mt-1 font-medium">{value}</div>
     </div>
+  );
+}
+
+function DDayStrip({ listing }: { listing: ListingDetail }) {
+  const items: Array<{
+    label: string;
+    iso?: string;
+    delta: ReturnType<typeof dayDelta>;
+  }> = [
+    { label: "접수 마감", iso: listing.applicationEnd, delta: dayDelta(listing.applicationEnd) },
+    { label: "당첨자 발표", iso: listing.winnerAnnouncementDate, delta: dayDelta(listing.winnerAnnouncementDate) },
+    { label: "입주예정", iso: listing.moveInDate, delta: dayDelta(listing.moveInDate) },
+  ];
+  // 적어도 하나 D-day 가 살아있는 게 있어야 의미 있음.
+  const hasAny = items.some((i) => i.delta != null);
+  if (!hasAny) return null;
+  return (
+    <section className="grid grid-cols-3 gap-2">
+      {items.map((it) => {
+        const tone = it.delta?.tone ?? "past";
+        const wrapClass =
+          tone === "urgent"
+            ? "rounded-lg border border-red-200 bg-red-50 p-3"
+            : tone === "soon"
+              ? "rounded-lg border border-amber-200 bg-amber-50 p-3"
+              : tone === "past"
+                ? "rounded-lg border border-zinc-200 bg-zinc-50 p-3 opacity-60"
+                : "rounded-lg border border-zinc-200 bg-white p-3";
+        const labelClass =
+          tone === "urgent"
+            ? "text-2xl font-bold text-red-700"
+            : tone === "soon"
+              ? "text-2xl font-bold text-amber-700"
+              : tone === "past"
+                ? "text-2xl font-bold text-zinc-400"
+                : "text-2xl font-bold text-zinc-700";
+        return (
+          <div key={it.label} className={wrapClass}>
+            <div className="text-xs text-zinc-500">{it.label}</div>
+            <div className={labelClass}>{it.delta?.label ?? "-"}</div>
+            <div className="text-xs text-zinc-500">{formatDateOnly(it.iso)}</div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function SummaryCard({ listing }: { listing: ListingDetail }) {
+  if (listing.units.length === 0) return null;
+  const isRental = RENTAL_TYPES.has(listing.listingType);
+  const sizes = listing.units.map((u) => Number(u.sizeM2)).filter((n) => Number.isFinite(n) && n > 0);
+  const minSize = sizes.length > 0 ? Math.min(...sizes) : null;
+  const maxSize = sizes.length > 0 ? Math.max(...sizes) : null;
+
+  if (isRental) {
+    const deposits = listing.units.map((u) => u.depositAmount).filter((n): n is number => n != null && n > 0);
+    const monthly = listing.units.map((u) => u.monthlyRent).filter((n): n is number => n != null && n > 0);
+    return (
+      <section className="grid gap-2 sm:grid-cols-3">
+        <Stat
+          label="면적 범위"
+          value={
+            minSize != null
+              ? minSize === maxSize
+                ? `${minSize.toFixed(1)}㎡`
+                : `${minSize.toFixed(1)} ~ ${maxSize?.toFixed(1)}㎡`
+              : "-"
+          }
+        />
+        <Stat
+          label="보증금"
+          value={
+            deposits.length > 0
+              ? Math.min(...deposits) === Math.max(...deposits)
+                ? formatKrw(Math.min(...deposits))
+                : `${formatKrw(Math.min(...deposits))} ~ ${formatKrw(Math.max(...deposits))}`
+              : "-"
+          }
+        />
+        <Stat
+          label="월 임대료"
+          value={
+            monthly.length > 0
+              ? Math.min(...monthly) === Math.max(...monthly)
+                ? formatKrw(Math.min(...monthly))
+                : `${formatKrw(Math.min(...monthly))} ~ ${formatKrw(Math.max(...monthly))}`
+              : "-"
+          }
+        />
+      </section>
+    );
+  }
+
+  const prices = listing.units.map((u) => u.priceMaxKrw).filter((n): n is number => n != null && n > 0);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
+  // 평당가 범위 (대표값) — 각 unit 별 평당가의 min/max
+  const pyungPrices = listing.units
+    .map((u) => pyungPriceMan(u.priceMaxKrw, u.sizeM2))
+    .filter((n): n is number => n != null && n > 0);
+  const minPp = pyungPrices.length > 0 ? Math.min(...pyungPrices) : null;
+  const maxPp = pyungPrices.length > 0 ? Math.max(...pyungPrices) : null;
+
+  return (
+    <section className="grid gap-2 sm:grid-cols-3">
+      <Stat
+        label="면적 범위"
+        value={
+          minSize != null
+            ? minSize === maxSize
+              ? `${minSize.toFixed(1)}㎡`
+              : `${minSize.toFixed(1)} ~ ${maxSize?.toFixed(1)}㎡`
+            : "-"
+        }
+      />
+      <Stat
+        label="분양가 범위"
+        value={
+          minPrice != null
+            ? minPrice === maxPrice
+              ? formatKrw(minPrice)
+              : `${formatKrw(minPrice)} ~ ${formatKrw(maxPrice ?? minPrice)}`
+            : "-"
+        }
+      />
+      <Stat
+        label="평당가 (추정)"
+        value={
+          minPp != null
+            ? minPp === maxPp
+              ? `${minPp.toLocaleString()}만원`
+              : `${minPp.toLocaleString()} ~ ${maxPp?.toLocaleString()}만원`
+            : "-"
+        }
+      />
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-3">
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="mt-1 text-base font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function UnitsTable({ listing }: { listing: ListingDetail }) {
+  const isRental = RENTAL_TYPES.has(listing.listingType);
+  return (
+    <section>
+      <h2 className="mb-2 font-semibold">공급 유형별</h2>
+      <div className="overflow-x-auto rounded-lg border border-zinc-200">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-50 text-xs text-zinc-500">
+            <tr>
+              <th className="px-3 py-2 text-left">주택형</th>
+              <th className="px-3 py-2 text-right">면적</th>
+              <th className="px-3 py-2 text-right">공급세대</th>
+              {isRental ? (
+                <>
+                  <th className="px-3 py-2 text-right">보증금</th>
+                  <th className="px-3 py-2 text-right">월 임대료</th>
+                </>
+              ) : (
+                <>
+                  <th className="px-3 py-2 text-right">최고분양가</th>
+                  <th className="px-3 py-2 text-right">평당가 (추정)</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {listing.units.map((u) => {
+              const pp = pyungPriceMan(u.priceMaxKrw, u.sizeM2);
+              return (
+                <tr key={u.id} className="border-t border-zinc-100">
+                  <td className="px-3 py-2">{u.unitType ?? "-"}</td>
+                  <td className="px-3 py-2 text-right">
+                    {u.sizeM2 ? `${Number(u.sizeM2).toFixed(1)}㎡` : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right">{u.supplyCount ?? "-"}</td>
+                  {isRental ? (
+                    <>
+                      <td className="px-3 py-2 text-right">{formatKrw(u.depositAmount)}</td>
+                      <td className="px-3 py-2 text-right">{formatKrw(u.monthlyRent)}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2 text-right">{formatKrw(u.priceMaxKrw)}</td>
+                      <td className="px-3 py-2 text-right text-zinc-500">
+                        {pp != null ? `${pp.toLocaleString()}만원` : "-"}
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!isRental && (
+        <p className="mt-1 text-xs text-zinc-500">
+          평당가 = 최고분양가 ÷ (전용면적 × 0.3025) — 공급면적 기준이 아니므로 실제 평당가와 차이 가능.
+        </p>
+      )}
+    </section>
   );
 }
 
