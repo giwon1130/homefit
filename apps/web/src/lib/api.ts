@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -6,6 +7,10 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080"
  * 서버 컴포넌트/액션에서만 사용. 401 받으면 세션 만료로 간주해 자동 로그아웃 후 /login 리다이렉트.
  *  - signIn 안 한 익명 호출에도 401 가능 — session 이 있을 때만 로그아웃 처리
  *  - 호출자가 명시적으로 401 처리하고 싶으면 `allow401: true` 옵션
+ *
+ * NextAuth v5 의 signOut() 은 server action / route handler 에서 가장 안전.
+ * server component 에서 호출 시 케이스에 따라 throw 가 NEXT_REDIRECT 가 아닐 수 있어,
+ * 실패해도 redirect("/login?error=...") 로 fallback.
  */
 export async function apiFetch(
   path: string,
@@ -21,10 +26,16 @@ export async function apiFetch(
   }
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
 
-  // 세션이 있는데 401 → 백엔드 토큰 만료. 무음 로그아웃 + /login 리다이렉트.
-  // signOut() 은 NextAuth v5 서버사이드 — CSRF 확인 페이지 안 보여주고 쿠키 정리.
   if (res.status === 401 && session?.accessToken && !init?.allow401) {
-    await signOut({ redirectTo: "/login?error=session_expired" });
+    try {
+      await signOut({ redirectTo: "/login?error=session_expired" });
+    } catch (e) {
+      // signOut 가 NEXT_REDIRECT 를 throw 하면 그대로 propagate. 그 외 실패는 swallow.
+      const code = (e as { digest?: string }).digest;
+      if (typeof code === "string" && code.startsWith("NEXT_REDIRECT")) throw e;
+      console.error("signOut failed; falling back to plain redirect", e);
+    }
+    redirect("/login?error=session_expired");
   }
   return res;
 }
