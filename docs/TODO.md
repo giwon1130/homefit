@@ -10,11 +10,10 @@
 
 ## ~~모바일 푸시 알림 (D-1)~~ ✅
 
-iOS/Android 푸시 알림 완료 — Expo Push Service 사용 (APNs/FCM 추상화).
-웹 푸시(VAPID) 와 결과발표 알림은 다음 단계.
+iOS/Android 푸시 + 결과발표 D-1 알림 완료 — Expo Push Service 사용.
 
 남은 후속:
-- 결과발표 알림 (announcementDate 윈도우)
+- 새 매칭 단지 알림 (점수 70+ 신규 단지 자동 추천)
 - 웹 푸시 (VAPID 키 발급 + service worker)
 - iOS Production APNs 인증 (Expo 가 sandbox/production 자동 분기 — TestFlight 업로드 시 production 자동)
 

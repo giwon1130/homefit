@@ -60,6 +60,52 @@ class NotificationRepository(
         }
     }
 
+    /**
+     * 당첨자 발표 D-1: winner_announcement_date 가 from..to (LocalDate 윈도우) 안인 즐겨찾기 후보.
+     * winner_announcement_date 는 LocalDate 라서 윈도우도 날짜 단위.
+     * 반환되는 PendingD1Notification 의 applicationEnd 필드는 발표일을 KST 자정으로 환산해 채움.
+     */
+    fun findPendingResultD1(from: java.time.LocalDate, toExclusive: java.time.LocalDate): List<PendingD1Notification> {
+        val sql = """
+            SELECT u.id           AS user_id,
+                   u.email        AS user_email,
+                   u.display_name AS user_display_name,
+                   u.notification_email_enabled AS email_enabled,
+                   u.notification_push_enabled  AS push_enabled,
+                   l.id           AS listing_id,
+                   l.name         AS listing_name,
+                   l.listing_type AS listing_type,
+                   l.winner_announcement_date AS event_date
+              FROM favorites f
+              JOIN users u    ON u.id = f.user_id
+              JOIN listings l ON l.id = f.listing_id
+             WHERE l.winner_announcement_date IS NOT NULL
+               AND l.winner_announcement_date >= :from
+               AND l.winner_announcement_date <  :to
+               AND (u.notification_email_enabled OR u.notification_push_enabled)
+             ORDER BY l.winner_announcement_date ASC, u.id ASC
+        """.trimIndent()
+        val params = MapSqlParameterSource()
+            .addValue("from", from)
+            .addValue("to", toExclusive)
+        val zone = java.time.ZoneId.of("Asia/Seoul")
+        return jdbc.query(sql, params) { rs, _ ->
+            val date = rs.getObject("event_date", java.time.LocalDate::class.java)
+            val midnightKst = date.atStartOfDay(zone).toOffsetDateTime()
+            PendingD1Notification(
+                userId = rs.getLong("user_id"),
+                userEmail = rs.getString("user_email"),
+                userDisplayName = rs.getString("user_display_name"),
+                emailEnabled = rs.getBoolean("email_enabled"),
+                pushEnabled = rs.getBoolean("push_enabled"),
+                listingId = rs.getLong("listing_id"),
+                listingName = rs.getString("listing_name"),
+                listingType = rs.getString("listing_type"),
+                applicationEnd = midnightKst,    // 발표일 0시 (사실상 발표일 자체)
+            )
+        }
+    }
+
     /** 사용자의 활성 푸시 토큰 목록. */
     fun findPushTokens(userId: Long): List<String> {
         return jdbc.query(

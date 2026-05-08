@@ -88,17 +88,26 @@ class IngestionAdminController(
         return mapOf("received" to body.items.size, "updated" to updated)
     }
 
-    /** D-1 알림 수동 디스패치 (테스트/긴급 발송용). */
+    /** 청약 접수 D-1 수동 디스패치 (테스트/긴급 발송용). */
     @PostMapping("/dispatch-d1")
     fun dispatchD1(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
         require(token)
-        val r = notifications.dispatchD1()
-        return mapOf(
+        return summarize(notifications.dispatchD1())
+    }
+
+    /** 당첨자 발표 D-1 수동 디스패치. */
+    @PostMapping("/dispatch-result-d1")
+    fun dispatchResultD1(@RequestHeader("X-Admin-Token") token: String): Map<String, Any> {
+        require(token)
+        return summarize(notifications.dispatchResultD1())
+    }
+
+    private fun summarize(r: app.homefit.ingestion.application.notification.NotificationDispatchService.DispatchResult): Map<String, Any> =
+        mapOf(
             "candidates" to r.candidates,
             "email" to mapOf("sent" to r.emailSent, "failed" to r.emailFailed, "skipped" to r.emailSkipped),
             "push" to mapOf("sent" to r.pushSent, "failed" to r.pushFailed, "skipped" to r.pushSkipped),
         )
-    }
 
     private fun require(token: String) {
         if (token != props.adminToken) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)

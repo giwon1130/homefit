@@ -28,6 +28,29 @@ class EmailSender(
      * @throws RuntimeException SMTP 실패시 — 호출자에서 캐치해서 FAILED 로그.
      */
     fun sendD1(target: PendingD1Notification) {
+        send(
+            target,
+            subject = "[homefit] 내일 청약 마감: ${target.listingName}",
+            heading = "내일 청약 마감 안내",
+            body = "즐겨찾기에 담아두신 청약의 접수 마감이 <strong>내일</strong>입니다.",
+            eventLabel = "접수 마감",
+        )
+        log.info("d1 email sent to {} listing={}", target.userEmail, target.listingId)
+    }
+
+    /** 즐겨찾기 청약의 당첨자 발표 D-1 안내. target.applicationEnd 에 발표일이 담겨 있음. */
+    fun sendResultD1(target: PendingD1Notification) {
+        send(
+            target,
+            subject = "[homefit] 내일 당첨 발표: ${target.listingName}",
+            heading = "내일 당첨자 발표 안내",
+            body = "즐겨찾기에 담아두신 청약의 당첨자 발표가 <strong>내일</strong>이에요.",
+            eventLabel = "발표일",
+        )
+        log.info("result-d1 email sent to {} listing={}", target.userEmail, target.listingId)
+    }
+
+    private fun send(target: PendingD1Notification, subject: String, heading: String, body: String, eventLabel: String) {
         if (props.from.isBlank()) {
             error("homefit.notification.email.from 미설정 — 발신자 주소가 필요합니다")
         }
@@ -35,13 +58,12 @@ class EmailSender(
         val helper = MimeMessageHelper(mime, false, "UTF-8")
         helper.setFrom(props.from)
         helper.setTo(target.userEmail)
-        helper.setSubject("[homefit] 내일 청약 마감: ${target.listingName}")
-        helper.setText(buildHtml(target), true)
+        helper.setSubject(subject)
+        helper.setText(buildHtml(target, heading, body, eventLabel), true)
         mailSender.send(mime)
-        log.info("d1 email sent to {} listing={}", target.userEmail, target.listingId)
     }
 
-    private fun buildHtml(t: PendingD1Notification): String {
+    private fun buildHtml(t: PendingD1Notification, heading: String, body: String, eventLabel: String): String {
         val deadline = krDate.format(t.applicationEnd)
         val name = t.userDisplayName?.takeIf { it.isNotBlank() } ?: "homefit 사용자"
         val detailUrl = "${props.webBaseUrl.trimEnd('/')}/listings/${t.listingId}"
@@ -49,12 +71,12 @@ class EmailSender(
         return """
             <!doctype html>
             <html lang="ko"><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #18181b; max-width: 560px; margin: 0 auto; padding: 24px;">
-              <h2 style="margin: 0 0 16px;">내일 청약 마감 안내</h2>
-              <p>안녕하세요 $name 님,<br>즐겨찾기에 담아두신 청약의 접수 마감이 <strong>내일</strong>입니다.</p>
+              <h2 style="margin: 0 0 16px;">$heading</h2>
+              <p>안녕하세요 $name 님,<br>$body</p>
               <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px; margin: 16px 0;">
                 <div style="font-size: 12px; color: #71717a;">$typeLabel</div>
                 <div style="font-size: 18px; font-weight: 700; margin-top: 4px;">${escape(t.listingName)}</div>
-                <div style="margin-top: 8px;">접수 마감: <strong>$deadline</strong></div>
+                <div style="margin-top: 8px;">$eventLabel: <strong>$deadline</strong></div>
               </div>
               <p style="margin: 24px 0;">
                 <a href="$detailUrl"
