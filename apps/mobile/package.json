@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "eas-build-pre-install": "cd ../.. && corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile"
   },
   "dependencies": {
     "@sentry/react-native": "^7.2.0",
