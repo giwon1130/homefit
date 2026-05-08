@@ -68,6 +68,9 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "giwon1130"
+    "owner": "giwon1130",
+    "updates": {
+      "url": "https://u.expo.dev/4246c823-c53c-4c9d-837c-04fe34f2323c"
+    }
   }
 }
