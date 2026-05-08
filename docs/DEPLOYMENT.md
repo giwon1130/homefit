@@ -124,6 +124,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 Apple Developer 멤버십 활성화 후 EAS Build 사용. `apps/mobile/eas.json` 에
 3개 프로필 (development / preview / production) 정의됨.
 
+> 첫 TestFlight 배포 단계별 런북: [`docs/TESTFLIGHT.md`](./TESTFLIGHT.md)
+
 ### 5.1 첫 셋업 (1회)
 
 ```bash
