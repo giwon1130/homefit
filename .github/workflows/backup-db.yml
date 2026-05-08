@@ -1,0 +1,79 @@
+name: DB Backup
+
+# 매일 KST 03:00 (UTC 18:00) 에 Railway Postgres 를 pg_dump 떠서
+# GitHub release 에 attached asset 으로 업로드.
+# 수동 실행도 가능 (workflow_dispatch).
+on:
+  schedule:
+    - cron: "0 18 * * *"   # UTC 18:00 = KST 03:00
+  workflow_dispatch:
+    inputs:
+      tag_suffix:
+        description: "릴리즈 태그 끝에 붙일 임의 문자열 (선택)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write     # release 생성/업로드용
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # postgresql-client-17 설치 (Railway 가 PostgreSQL 16 사용 — 마이너 차이는 호환).
+      # 안전하게 17 client 로 16 server 받음.
+      - name: Install pg_dump
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg-archive-keyring.gpg
+          sudo sh -c 'cat /etc/apt/sources.list.d/pgdg.list | sed "s|deb |deb [signed-by=/usr/share/keyrings/pgdg-archive-keyring.gpg] |" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::BACKUP_DATABASE_URL secret 미설정"
+            exit 1
+          fi
+          STAMP=$(date -u +"%Y%m%dT%H%M%SZ")
+          FILE="homefit-${STAMP}.dump"
+          # custom format (-Fc) — pg_restore 로 복구. gzip 보다 효율적이고 selective restore 가능.
+          pg_dump --format=custom --no-owner --no-acl --file "$FILE" "$DATABASE_URL"
+          ls -lh "$FILE"
+          echo "FILE=$FILE" >> $GITHUB_ENV
+          echo "STAMP=$STAMP" >> $GITHUB_ENV
+
+      - name: Upload as GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUFFIX: ${{ github.event.inputs.tag_suffix }}
+        run: |
+          DATE_TAG=$(date -u +"%Y-%m-%d")
+          TAG="db-backup-${DATE_TAG}${SUFFIX:+-$SUFFIX}"
+          # 같은 태그가 이미 있으면 같은 release 에 자산 추가, 없으면 release 생성.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$FILE" --clobber
+          else
+            gh release create "$TAG" "$FILE" \
+              --title "DB backup ${DATE_TAG}${SUFFIX:+ ($SUFFIX)}" \
+              --notes "Automated nightly backup taken at ${STAMP}." \
+              --prerelease
+          fi
+
+      # 30일 이상 된 백업 release 삭제 (GitHub 무료 저장소 무한 보존이지만 정리).
+      - name: Prune old backups (>30 days)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          THRESHOLD=$(date -u -d "30 days ago" +"%Y-%m-%d")
+          gh release list --limit 200 --json tagName,createdAt \
+            | jq -r '.[] | select(.tagName | startswith("db-backup-")) | select(.createdAt < "'"$THRESHOLD"'") | .tagName' \
+            | while read -r tag; do
+                echo "deleting old backup release $tag"
+                gh release delete "$tag" -y --cleanup-tag || true
+              done

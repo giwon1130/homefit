@@ -35,5 +35,7 @@ iOS/Android 푸시 + 결과발표 D-1 알림 완료 — Expo Push Service 사용
 - 사용자 수가 많아지면 /match 응답이 느려질 것. 백그라운드 워커가 사용자별 점수 미리 계산해서 DB 저장.
 - 현재는 Redis 캐시(30분)로 충분.
 
-## 백업 자동화
-- Railway Hobby 자동 백업이 약함. 야간 `pg_dump` → S3 (또는 GitHub release artifact).
+## ~~백업 자동화~~ ✅
+야간 `pg_dump` → GitHub release attached asset, 30일 이상 자동 prune.
+`.github/workflows/backup-db.yml` + `scripts/backup-db.sh` (수동용).
+secret `BACKUP_DATABASE_URL` 만 등록하면 즉시 작동.
