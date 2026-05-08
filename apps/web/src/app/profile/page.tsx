@@ -22,11 +22,51 @@ export default async function ProfilePage() {
       </div>
     );
   }
-  const profile: FullProfile = await profileRes.json();
-  const score: ScoreResp | null = scoreRes.ok ? await scoreRes.json() : null;
-  const notifPref: { emailEnabled: boolean; pushEnabled: boolean } = notifRes.ok
-    ? await notifRes.json()
-    : { emailEnabled: true, pushEnabled: true };
+
+  // 이하의 .json() 들은 모두 방어적으로 — body parse 실패 / shape 불일치를
+  // 페이지 전체 5xx 로 끌고 가지 않는다.
+  let profile: FullProfile;
+  try {
+    profile = (await profileRes.json()) as FullProfile;
+  } catch (e) {
+    console.error("/api/v1/profile 응답 파싱 실패", e);
+    return (
+      <div className="rounded border border-red-200 bg-red-50 p-4 text-red-700">
+        프로필 응답 형식이 올바르지 않습니다. 서버 배포 직후라면 잠시 후 새로고침.
+      </div>
+    );
+  }
+  // 누락된 배열 필드 방어 (구버전 api 호환).
+  profile.householdMembers ??= [];
+  profile.incomes ??= [];
+  profile.workplaces ??= [];
+
+  let score: ScoreResp | null = null;
+  if (scoreRes.ok) {
+    try {
+      score = (await scoreRes.json()) as ScoreResp;
+      // breakdown 누락된 응답이면 score 카드 자체를 안 보여줌.
+      if (!score?.breakdown?.noHomePeriod) score = null;
+    } catch (e) {
+      console.error("/api/v1/profile/score 파싱 실패", e);
+      score = null;
+    }
+  }
+
+  let notifPref: { emailEnabled: boolean; pushEnabled: boolean } = {
+    emailEnabled: true, pushEnabled: true,
+  };
+  if (notifRes.ok) {
+    try {
+      const raw = (await notifRes.json()) as { emailEnabled?: boolean; pushEnabled?: boolean };
+      notifPref = {
+        emailEnabled: raw.emailEnabled ?? true,
+        pushEnabled: raw.pushEnabled ?? true,
+      };
+    } catch {
+      // fallback already set
+    }
+  }
 
   return (
     <div className="space-y-6">
