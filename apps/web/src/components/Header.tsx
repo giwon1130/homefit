@@ -15,6 +15,9 @@ export default function Header() {
           <Link href="/" className="text-zinc-600 hover:text-zinc-900">
             청약목록
           </Link>
+          <Link href="/map" className="text-zinc-600 hover:text-zinc-900">
+            지도
+          </Link>
           {status === "authenticated" ? (
             <>
               <Link href="/match" className="text-zinc-600 hover:text-zinc-900">
