@@ -18,6 +18,11 @@ data class PendingD1Notification(
     val applicationEnd: OffsetDateTime,
 )
 
-enum class NotificationKind { D_MINUS_1 }
+enum class NotificationKind {
+    /** 청약 접수 마감 D-1 (오늘+1일에 마감되는 즐겨찾기 단지). */
+    D_MINUS_1,
+    /** 당첨자 발표 D-1 (오늘+1일에 발표되는 즐겨찾기 단지). */
+    RESULT_D_MINUS_1,
+}
 enum class NotificationChannel { EMAIL, PUSH }
 enum class NotificationStatus { SENT, FAILED }

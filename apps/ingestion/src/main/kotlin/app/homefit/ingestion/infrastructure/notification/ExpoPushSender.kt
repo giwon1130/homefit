@@ -40,19 +40,36 @@ class ExpoPushSender(
 
     private val mapper = jacksonObjectMapper()
 
-    /**
-     * 단일 ExponentPushToken 으로 D-1 알림 발송.
-     * @throws RuntimeException 토큰이 invalid 거나 Expo 가 실패 응답을 주면 — 호출자가 FAILED 로깅.
-     */
+    /** 청약 접수 마감 D-1. */
     fun sendD1(token: String, target: PendingD1Notification) {
-        val deadline = krDate.format(target.applicationEnd)
-        val body = mapOf(
+        val date = krDate.format(target.applicationEnd)
+        send(
+            token, target,
+            kind = "D_MINUS_1",
+            title = "내일 청약 마감",
+            body = "${target.listingName} · $date",
+        )
+    }
+
+    /** 당첨자 발표 D-1. target.applicationEnd 에 발표일 0시(KST) 가 담겨 있음. */
+    fun sendResultD1(token: String, target: PendingD1Notification) {
+        val date = krDate.format(target.applicationEnd)
+        send(
+            token, target,
+            kind = "RESULT_D_MINUS_1",
+            title = "내일 당첨 발표",
+            body = "${target.listingName} · $date 발표",
+        )
+    }
+
+    private fun send(token: String, target: PendingD1Notification, kind: String, title: String, body: String) {
+        val payload = mapOf(
             "to" to token,
             "sound" to "default",
-            "title" to "내일 청약 마감",
-            "body" to "${target.listingName} · $deadline",
+            "title" to title,
+            "body" to body,
             "data" to mapOf(
-                "kind" to "D_MINUS_1",
+                "kind" to kind,
                 "listingId" to target.listingId,
                 "deepLink" to "${emailProps.webBaseUrl.trimEnd('/')}/listings/${target.listingId}",
             ),
@@ -62,7 +79,7 @@ class ExpoPushSender(
             client.post()
                 .uri("/--/api/v2/push/send")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
+                .bodyValue(payload)
                 .retrieve()
                 .bodyToMono(String::class.java)
                 .block(Duration.ofSeconds(10))
@@ -71,8 +88,7 @@ class ExpoPushSender(
             error("expo push http ${e.statusCode}: ${e.responseBodyAsString.take(200)}")
         }
 
-        // Expo 응답 형태: {"data": {"status": "ok"|"error", "message": "...", ...}}
-        // 또는 {"data": [{"status": ...}]} (배치 시).
+        // Expo 응답: {"data": {"status": "ok"|"error", "message": "..."}}
         val parsed = mapper.readTree(raw)
         val data = parsed["data"]
         val status: String? = when {
@@ -88,6 +104,6 @@ class ExpoPushSender(
             }
             error("expo push not ok: $message")
         }
-        log.info("expo push sent token=...{} listing={}", token.takeLast(8), target.listingId)
+        log.info("expo push sent kind={} token=...{} listing={}", kind, token.takeLast(8), target.listingId)
     }
 }

@@ -6,14 +6,18 @@ import app.homefit.ingestion.infrastructure.notification.ExpoPushSender
 import app.homefit.ingestion.infrastructure.notification.NotificationRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
- * D-1 알림 디스패처. 채널 (이메일 + 푸시) 양쪽으로 발송.
- * - 채널별 사용자 토글이 OFF 면 해당 채널 스킵.
- * - 이미 전송 로그가 있는 (user, listing, kind, channel) 은 unique idx 가 차단.
- * - 한 채널 실패해도 다른 채널은 시도.
+ * 알림 디스패처. 두 종류:
+ *   1) D_MINUS_1 — 청약 접수 마감 D-1 (시간당 cron, 22~26h 윈도우)
+ *   2) RESULT_D_MINUS_1 — 당첨자 발표 D-1 (매일 09시 cron, 내일 1일 윈도우)
+ *
+ * 채널 (이메일 + 푸시) 양쪽 발송. 채널별 토글 OFF / unique idx 충돌 / SMTP disabled
+ * 모두 SKIP. 한 채널 실패해도 다른 채널은 시도.
  */
 @Service
 class NotificationDispatchService(
@@ -32,19 +36,44 @@ class NotificationDispatchService(
         val pushSent: Int,
         val pushFailed: Int,
         val pushSkipped: Int,
-    )
+    ) {
+        companion object { val ZERO = DispatchResult(0, 0, 0, 0, 0, 0, 0) }
+    }
+
+    /** 청약 접수 마감 D-1. now+22h~now+26h 윈도우 (시간당 cron 안전 마진). */
+    fun dispatchD1(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): DispatchResult {
+        val pending = repo.findPendingD1(now.plusHours(22), now.plusHours(26))
+        return dispatchKind(
+            pending = pending,
+            kind = NotificationKind.D_MINUS_1,
+            emailFn = email::sendD1,
+            pushFn = push::sendD1,
+        )
+    }
+
+    /** 당첨자 발표 D-1. 매일 1회 (09시 KST 권장). 내일 발표인 즐겨찾기 단지. */
+    fun dispatchResultD1(today: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): DispatchResult {
+        val pending = repo.findPendingResultD1(today.plusDays(1), today.plusDays(2))
+        return dispatchKind(
+            pending = pending,
+            kind = NotificationKind.RESULT_D_MINUS_1,
+            emailFn = email::sendResultD1,
+            pushFn = push::sendResultD1,
+        )
+    }
 
     /**
-     * 현재 시각 기준 [now+22h, now+26h) 윈도우 안에 마감되는 즐겨찾기 단지 후보를 모두 모아
-     * 이메일/푸시 채널로 각각 발송. 시간당 1회 호출 — 4시간 윈도우는 안전 마진.
+     * 채널 발송 + 로그 + 카운트. kind 는 unique idx 차단·로그용.
      */
-    fun dispatchD1(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): DispatchResult {
-        val from = now.plusHours(22)
-        val to = now.plusHours(26)
-        val pending = repo.findPendingD1(from, to)
+    private fun dispatchKind(
+        pending: List<PendingD1Notification>,
+        kind: NotificationKind,
+        emailFn: (PendingD1Notification) -> Unit,
+        pushFn: (String, PendingD1Notification) -> Unit,
+    ): DispatchResult {
         if (pending.isEmpty()) {
-            log.debug("no pending D-1 notifications in window {} -> {}", from, to)
-            return DispatchResult(0, 0, 0, 0, 0, 0, 0)
+            log.debug("no pending {} notifications", kind)
+            return DispatchResult.ZERO
         }
 
         var emailSent = 0; var emailFailed = 0; var emailSkipped = 0
@@ -52,33 +81,28 @@ class NotificationDispatchService(
 
         for (target in pending) {
             // ---- 이메일 ----
-            if (!emailProps.enabled) {
-                emailSkipped++
-            } else if (!target.emailEnabled) {
-                emailSkipped++
-            } else if (repo.isAlreadyLogged(target.userId, target.listingId, NotificationKind.D_MINUS_1, NotificationChannel.EMAIL)) {
+            if (!emailProps.enabled || !target.emailEnabled ||
+                repo.isAlreadyLogged(target.userId, target.listingId, kind, NotificationChannel.EMAIL)
+            ) {
                 emailSkipped++
             } else {
                 try {
-                    email.sendD1(target)
-                    val inserted = repo.logSent(
-                        target.userId, target.listingId,
-                        NotificationKind.D_MINUS_1, NotificationChannel.EMAIL,
-                    )
+                    emailFn(target)
+                    val inserted = repo.logSent(target.userId, target.listingId, kind, NotificationChannel.EMAIL)
                     if (inserted) emailSent++ else emailSkipped++
                 } catch (e: Exception) {
-                    log.warn("email d1 failed user={} listing={} reason={}", target.userEmail, target.listingId, e.message)
-                    repo.logFailed(target.userId, target.listingId, NotificationKind.D_MINUS_1, NotificationChannel.EMAIL, e.message ?: e::class.simpleName.orEmpty())
+                    log.warn("email {} failed user={} listing={} reason={}",
+                        kind, target.userEmail, target.listingId, e.message)
+                    repo.logFailed(target.userId, target.listingId, kind, NotificationChannel.EMAIL,
+                        e.message ?: e::class.simpleName.orEmpty())
                     emailFailed++
                 }
             }
 
             // ---- 푸시 ----
-            if (!target.pushEnabled) {
-                pushSkipped++
-                continue
-            }
-            if (repo.isAlreadyLogged(target.userId, target.listingId, NotificationKind.D_MINUS_1, NotificationChannel.PUSH)) {
+            if (!target.pushEnabled ||
+                repo.isAlreadyLogged(target.userId, target.listingId, kind, NotificationChannel.PUSH)
+            ) {
                 pushSkipped++
                 continue
             }
@@ -87,24 +111,25 @@ class NotificationDispatchService(
                 pushSkipped++
                 continue
             }
-
-            // 한 사용자가 여러 디바이스 보유 가능 — 모두 발송. 한 디바이스라도 성공하면 SENT.
+            // 여러 디바이스 — 하나라도 성공하면 SENT, 전부 실패면 FAILED.
             var anySuccess = false
             var lastError: String? = null
             for (token in tokens) {
                 try {
-                    push.sendD1(token, target)
+                    pushFn(token, target)
                     anySuccess = true
                 } catch (e: Exception) {
-                    log.warn("push d1 failed user={} listing={} token=...{} reason={}", target.userId, target.listingId, token.takeLast(8), e.message)
+                    log.warn("push {} failed user={} listing={} token=...{} reason={}",
+                        kind, target.userId, target.listingId, token.takeLast(8), e.message)
                     lastError = e.message ?: e::class.simpleName.orEmpty()
                 }
             }
             if (anySuccess) {
-                val inserted = repo.logSent(target.userId, target.listingId, NotificationKind.D_MINUS_1, NotificationChannel.PUSH)
+                val inserted = repo.logSent(target.userId, target.listingId, kind, NotificationChannel.PUSH)
                 if (inserted) pushSent++ else pushSkipped++
             } else {
-                repo.logFailed(target.userId, target.listingId, NotificationKind.D_MINUS_1, NotificationChannel.PUSH, lastError ?: "all tokens failed")
+                repo.logFailed(target.userId, target.listingId, kind, NotificationChannel.PUSH,
+                    lastError ?: "all tokens failed")
                 pushFailed++
             }
         }
