@@ -119,16 +119,68 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 - Vercel: `homefit.app` → Vercel DNS
 - 구매: Cloudflare Registrar 권장 (원가)
 
-## 5. iOS 빌드 (당장은 로컬)
+## 5. iOS 빌드 (EAS Build → TestFlight)
 
-Phase 0~2: Expo prebuild → Xcode 로컬 서명 → 실기기
-Phase 3+: EAS Build → TestFlight
+Apple Developer 멤버십 활성화 후 EAS Build 사용. `apps/mobile/eas.json` 에
+3개 프로필 (development / preview / production) 정의됨.
 
+### 5.1 첫 셋업 (1회)
+
+```bash
+# Expo 계정 로그인 + EAS CLI 설치
+pnpm dlx eas-cli@latest login
+pnpm dlx eas-cli@latest init   # apps/mobile 안에서, projectId 자동 발급
+
+# eas init 결과 → apps/mobile/app.json 의 extra.eas.projectId 갱신 (PR 로 커밋)
+# updates.url 의 PROJECT_ID_REPLACE 도 실제 ID 로 교체
+```
+
+Apple credentials 는 첫 빌드 시 EAS 가 자동 발급/관리:
+- iOS Distribution Certificate
+- Provisioning Profile
+- Push Notifications Key (Expo Push 용)
+- Sign in with Apple capability (`app.json` 의 `usesAppleSignIn=true` 자동 인식)
+
+### 5.2 일반 빌드 사이클
+
+```bash
+cd apps/mobile
+
+# 시뮬레이터 빌드 (개발 중 빠른 확인)
+pnpm dlx eas-cli build -p ios --profile development
+
+# 내부 배포 (TestFlight 전 단계, ad-hoc 실기기)
+pnpm dlx eas-cli build -p ios --profile preview
+
+# TestFlight / App Store 제출용
+pnpm dlx eas-cli build -p ios --profile production
+pnpm dlx eas-cli submit -p ios --latest    # → App Store Connect 업로드
+```
+
+`production` 프로필은 `autoIncrement: true` 라 buildNumber 자동 증가.
+
+### 5.3 OTA 업데이트 (네이티브 변경 없을 때)
+
+```bash
+pnpm dlx eas-cli update --branch production --message "fix: ..."
+```
+
+`runtimeVersion.policy=appVersion` 이라 같은 1.0.x 안에선 OTA 가능, 1.1.0
+이상으로 올라가면 새 binary 빌드 필요.
+
+### 5.4 환경별 분기 (선택)
+
+운영 vs 스테이징 API 를 갈라 쓰려면:
+- `eas.json` 의 build.profile 마다 `env.EXPO_PUBLIC_API_BASE_URL` 지정
+- 현재는 `apps/mobile/app.json` 의 `extra.apiBaseUrl` 단일 값 사용
+
+### 5.5 옛 흐름 (참고용)
+
+EAS 셋업 전엔 로컬 prebuild + Xcode 로 띄웠음:
 ```bash
 cd apps/mobile
 pnpm expo prebuild --platform ios
 open ios/homefit.xcworkspace
-# Xcode: Signing & Capabilities → Team 설정 → Run
 ```
 
 ## 6. 비용 예상 (Railway)
