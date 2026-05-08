@@ -4,7 +4,6 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "_comment": "프로필별 용도 — development: 디버그+expo-dev-client / preview: TestFlight 전 내부 / production: TestFlight·App Store",
     "development": {
       "developmentClient": true,
       "distribution": "internal",
@@ -29,11 +28,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "_comment": "ASC API key 또는 Apple ID 인증. 'eas submit -p ios' 호출 시 대화형으로 묻거나 EXPO_APPLE_APP_SPECIFIC_PASSWORD 등 환경변수.",
-        "ascAppId": ""
-      }
-    }
+    "production": {}
   }
 }

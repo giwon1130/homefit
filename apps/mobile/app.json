@@ -6,7 +6,10 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "homefit",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "newArchEnabled": true,
     "icon": "./assets/icon.png",
     "splash": {
@@ -34,13 +37,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/PROJECT_ID_REPLACE"
-    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-web-browser",
       [
         "expo-notifications",
         {
@@ -59,12 +58,16 @@
       "googleClientId": "",
       "sentryDsn": "",
       "sentryEnv": "production",
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "REPLACE_AFTER_eas_init"
+        "projectId": "4246c823-c53c-4c9d-837c-04fe34f2323c"
       }
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "giwon1130"
   }
 }
