@@ -45,6 +45,9 @@ homefit:
     refresh-token-ttl-days: 30
     google:
       client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    apple:
+      # iOS 번들 ID + 필요시 웹 Service ID. 비어있으면 Apple 로그인 비활성.
+      audiences: ${APPLE_AUDIENCES:}
   crypto:
     # base64-encoded 32 bytes. Railway AES_ENCRYPTION_KEY env var.
     aes-key-base64: ${AES_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}

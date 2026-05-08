@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "app.homefit.mobile",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "app.homefit.mobile"
@@ -19,7 +20,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-apple-authentication"
     ],
     "notification": {
       "iosDisplayInForeground": true

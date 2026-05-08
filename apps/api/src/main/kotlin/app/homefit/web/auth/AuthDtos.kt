@@ -10,6 +10,17 @@ data class GoogleSignInRequest(
     val idToken: String,
 )
 
+/**
+ * Sign in with Apple — id_token + (옵션) 사용자 표시 이름.
+ * Apple 은 최초 로그인에만 fullName 을 클라이언트에 전달하므로,
+ * 클라이언트가 받아서 첫 등록 시 보내준다 (이후엔 null).
+ */
+data class AppleSignInRequest(
+    @field:NotBlank
+    val idToken: String,
+    val displayName: String? = null,
+)
+
 data class RefreshRequest(
     @field:NotBlank
     val refreshToken: String,
