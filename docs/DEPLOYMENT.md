@@ -192,6 +192,38 @@ open ios/homefit.xcworkspace
 
 ## 7. 롤백 / 장애 대응
 
+### 7.1 배포 롤백
+
 - Railway: Deployments 탭 → 이전 배포 Redeploy
-- DB: Railway 자동 백업 (Pro 플랜), Hobby는 주기적 `pg_dump`를 GitHub Actions로 돌려 Private 리포에 저장
-- 긴급 읽기전용 모드: feature flag로 쓰기 엔드포인트 차단
+- 긴급 읽기전용 모드: feature flag 로 쓰기 엔드포인트 차단
+
+### 7.2 DB 백업
+
+`.github/workflows/backup-db.yml` 이 매일 KST 03:00 (UTC 18:00) 에
+Railway Postgres 를 `pg_dump --format=custom` 으로 받아서 GitHub release
+의 attached asset 으로 업로드. 30일 이상 된 백업은 자동 prune.
+
+**필수 secret**: GitHub repo → Settings → Secrets → Actions
+- `BACKUP_DATABASE_URL` — Railway Postgres 의 read-only / 또는 연결 가능한
+  full URL (`postgresql://user:pass@host:port/db`). 보통 Railway 가 제공하는
+  `DATABASE_URL` 을 그대로 쓰면 됨.
+
+**수동 실행**: GitHub Actions UI → DB Backup → Run workflow
+또는 로컬:
+```bash
+DATABASE_URL=postgres://... ./scripts/backup-db.sh
+```
+
+### 7.3 DB 복구
+
+GitHub release `db-backup-YYYY-MM-DD` 의 `.dump` 파일 다운로드 후:
+
+```bash
+# 새 빈 DB 에 복구 (운영 DB 덮어쓰지 말 것 — 먼저 staging 으로 검증)
+pg_restore --no-owner --no-acl --clean --if-exists \
+  -d "postgresql://user:pass@host:port/restore_target" \
+  homefit-XXXX.dump
+```
+
+PostGIS 확장은 Flyway 가 첫 마이그레이션에서 자동 활성화하므로
+`CREATE EXTENSION` 을 미리 할 필요는 없음.
