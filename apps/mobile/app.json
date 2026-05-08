@@ -11,10 +11,21 @@
     "ios": {
       "bundleIdentifier": "app.homefit.mobile",
       "supportsTablet": false,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "app.homefit.mobile"
+      "package": "app.homefit.mobile",
+      "versionCode": 1
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/PROJECT_ID_REPLACE"
     },
     "plugins": [
       "expo-router",
@@ -28,7 +39,10 @@
     },
     "extra": {
       "apiBaseUrl": "https://api-production-1d45.up.railway.app",
-      "googleClientId": ""
+      "googleClientId": "",
+      "eas": {
+        "projectId": "REPLACE_AFTER_eas_init"
+      }
     },
     "experiments": {
       "typedRoutes": true
