@@ -32,7 +32,17 @@ export default async function FavoritesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">즐겨찾기</h1>
+      <div className="flex items-end justify-between">
+        <h1 className="text-2xl font-bold">즐겨찾기</h1>
+        {items.length >= 2 && (
+          <Link
+            href="/favorites/compare"
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+          >
+            비교하기 →
+          </Link>
+        )}
+      </div>
       {items.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-white p-8 text-center text-zinc-500">
           아직 즐겨찾기한 청약이 없어요. 상세 화면의 ❤ 버튼으로 추가하세요.
