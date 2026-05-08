@@ -6,6 +6,7 @@ import Constants from "expo-constants";
 import { useEffect } from "react";
 import { Platform } from "react-native";
 import { registerPushToken, unregisterPushToken } from "./push";
+import { clearSentryUser, setSentryUser } from "./sentry";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,6 +34,7 @@ export async function clearTokens(): Promise<void> {
   await SecureStore.deleteItemAsync(ACCESS_KEY);
   await SecureStore.deleteItemAsync(REFRESH_KEY);
   await SecureStore.deleteItemAsync(USER_KEY);
+  clearSentryUser();
 }
 
 export async function isLoggedIn(): Promise<boolean> {
@@ -72,6 +74,7 @@ export function useGoogleSignIn(onSuccess?: () => void) {
       await SecureStore.setItemAsync(ACCESS_KEY, data.accessToken);
       await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user));
+      setSentryUser(data.user.id);
       // 토큰 등록은 best-effort — 실패해도 로그인 자체는 진행.
       void registerPushToken();
       onSuccess?.();
@@ -127,6 +130,7 @@ export async function appleSignIn(): Promise<boolean> {
     await SecureStore.setItemAsync(ACCESS_KEY, data.accessToken);
     await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user));
+    setSentryUser(data.user.id);
     void registerPushToken();
     return true;
   } catch (e) {

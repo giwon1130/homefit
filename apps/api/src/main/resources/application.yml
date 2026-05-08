@@ -35,6 +35,18 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+sentry:
+  # DSN 미설정이면 Sentry SDK 가 no-op (안전).
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENV:${SPRING_PROFILES_ACTIVE:default}}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  traces-sample-rate: 0.05
+  enable-tracing: true
+  logging:
+    minimum-event-level: warn      # WARN+ 만 이벤트로 (스팸 방지)
+    minimum-breadcrumb-level: info
+
 homefit:
   admin:
     # 관리자 큐레이션 엔드포인트(/api/v1/admin/*) 보호용. ingestion 토큰 재사용 가능.

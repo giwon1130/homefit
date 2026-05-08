@@ -17,9 +17,15 @@ iOS/Android 푸시 + 결과발표 D-1 알림 완료 — Expo Push Service 사용
 - 웹 푸시 (VAPID 키 발급 + service worker)
 - iOS Production APNs 인증 (Expo 가 sandbox/production 자동 분기 — TestFlight 업로드 시 production 자동)
 
-## Sentry 에러 트래킹
-- DSN 발급 후 api + web 양쪽 SDK 설치
-- 401/500 자동 캡처 + 사용자 컨텍스트 (user.id)
+## ~~Sentry 에러 트래킹~~ ✅
+4개 서비스 (api / ingestion / web / mobile) SDK 설치 완료. DSN 환경변수만 설정하면
+즉시 활성화. user.id 자동 부착 (api: JwtFilter, mobile: 로그인/로그아웃 훅).
+
+운영 적용:
+- Sentry 프로젝트 생성 → DSN 발급 → 환경변수에 주입:
+  - api/ingestion: `SENTRY_DSN`, `SENTRY_ENV`, (선택) `SENTRY_RELEASE`
+  - web: `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, (sourcemap 업로드용) `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT`
+  - mobile: app.json `extra.sentryDsn` 또는 `EXPO_PUBLIC_SENTRY_DSN`
 
 ## /listings 좌표 정밀화
 - LH 누락 단지 (~457개) 수동 큐레이션 admin 페이지

@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@sentry/react-native": "^8.11.0",
     "@tanstack/react-query": "^5.59.20",
     "expo": "~54.0.0",
     "expo-apple-authentication": "^55.0.13",
