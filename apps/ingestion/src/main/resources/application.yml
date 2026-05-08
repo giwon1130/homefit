@@ -33,6 +33,17 @@ management:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      # Spring Boot K8s probes — liveness 는 외부 의존성(Redis/DB) 무관 즉시 UP.
+      # Railway healthcheckPath 가 /actuator/health/liveness 로 바뀜.
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    redis:
+      # Redis 가 일시적으로 unavailable 해도 /actuator/health 가 DOWN 안 되도록 비필수.
+      enabled: false
 
 sentry:
   dsn: ${SENTRY_DSN:}
