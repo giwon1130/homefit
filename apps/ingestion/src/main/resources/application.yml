@@ -34,6 +34,16 @@ management:
       exposure:
         include: health,info
 
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENV:${SPRING_PROFILES_ACTIVE:default}}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  traces-sample-rate: 0.02
+  logging:
+    minimum-event-level: warn
+    minimum-breadcrumb-level: info
+
 homefit:
   publicdata:
     base-url: https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/

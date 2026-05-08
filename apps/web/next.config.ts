@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -13,7 +14,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://*.daumcdn.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://*.googleusercontent.com",
-  `connect-src 'self' ${apiBase} https://api.vworld.kr https://api.odsay.com https://nominatim.openstreetmap.org`,
+  `connect-src 'self' ${apiBase} https://api.vworld.kr https://api.odsay.com https://nominatim.openstreetmap.org https://*.sentry.io https://*.ingest.sentry.io`,
   "font-src 'self' data:",
   "frame-src https://postcode.map.daum.net",
   "frame-ancestors 'none'",
@@ -37,4 +38,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry 가 활성화된 환경(SENTRY_DSN/AUTH_TOKEN) 에서만 wrap 적용.
+// 미설정이면 plain config 그대로 export → 빌드 영향 0.
+const sentryWrapped = process.env.SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      silent: true,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      // sourcemap 업로드는 SENTRY_AUTH_TOKEN 있을 때만.
+      widenClientFileUpload: true,
+      sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+      disableLogger: true,
+    })
+  : nextConfig;
+
+export default sentryWrapped;

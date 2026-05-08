@@ -32,7 +32,8 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-notifications",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "@sentry/react-native/expo"
     ],
     "notification": {
       "iosDisplayInForeground": true
@@ -40,6 +41,8 @@
     "extra": {
       "apiBaseUrl": "https://api-production-1d45.up.railway.app",
       "googleClientId": "",
+      "sentryDsn": "",
+      "sentryEnv": "production",
       "eas": {
         "projectId": "REPLACE_AFTER_eas_init"
       }

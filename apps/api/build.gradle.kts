@@ -40,6 +40,8 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:7.18.0")
+    implementation("io.sentry:sentry-logback:7.18.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")

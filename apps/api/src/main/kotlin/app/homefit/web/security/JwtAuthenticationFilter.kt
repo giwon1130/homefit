@@ -1,6 +1,8 @@
 package app.homefit.web.security
 
 import app.homefit.application.auth.JwtService
+import io.sentry.Sentry
+import io.sentry.protocol.User as SentryUser
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -29,8 +31,15 @@ class JwtAuthenticationFilter(
                     userId, null, listOf(SimpleGrantedAuthority("ROLE_USER")),
                 )
                 SecurityContextHolder.getContext().authentication = auth
+                // Sentry 이벤트가 발생하면 어떤 사용자인지만 식별 가능하게 (PII 최소).
+                Sentry.setUser(SentryUser().apply { this.id = userId.toString() })
             }
         }
-        filterChain.doFilter(request, response)
+        try {
+            filterChain.doFilter(request, response)
+        } finally {
+            // 요청 단위 user 정리 (다음 요청에 누설 방지).
+            Sentry.setUser(null)
+        }
     }
 }

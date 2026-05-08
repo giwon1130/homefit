@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { configureNotificationHandler } from "@/lib/push";
+import { initSentry } from "@/lib/sentry";
 
+initSentry();
 configureNotificationHandler();
 
 export default function RootLayout() {
