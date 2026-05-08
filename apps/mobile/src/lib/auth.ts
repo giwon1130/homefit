@@ -1,8 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
 import Constants from "expo-constants";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { registerPushToken, unregisterPushToken } from "./push";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -80,6 +82,61 @@ export function useGoogleSignIn(onSuccess?: () => void) {
     ready: !!request,
     signIn: () => promptAsync(),
   };
+}
+
+/**
+ * Sign in with Apple — iOS 13+ 에서만 작동. expo-apple-authentication 가
+ * 네이티브 SIWA 시트를 띄우고 ID 토큰을 반환. 백엔드에 토큰 + (첫 로그인 시) 이름을 전달.
+ *
+ * Apple 정책상 Google sign-in 이 있으면 SIWA 도 의무 (App Store Review Guideline 4.8).
+ */
+export async function appleSignIn(): Promise<boolean> {
+  if (Platform.OS !== "ios") return false;
+  try {
+    const available = await AppleAuthentication.isAvailableAsync();
+    if (!available) return false;
+
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+    const idToken = credential.identityToken;
+    if (!idToken) return false;
+
+    const displayName = [credential.fullName?.givenName, credential.fullName?.familyName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || null;
+
+    const res = await fetch(`${API_BASE}/api/v1/auth/apple`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken, displayName }),
+    });
+    if (!res.ok) {
+      console.warn("apple sign-in backend rejected", res.status);
+      return false;
+    }
+    const data = (await res.json()) as {
+      accessToken: string;
+      refreshToken: string;
+      user: { id: number; email: string; displayName?: string };
+    };
+    await SecureStore.setItemAsync(ACCESS_KEY, data.accessToken);
+    await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user));
+    void registerPushToken();
+    return true;
+  } catch (e) {
+    // 사용자가 취소한 경우 (ERR_REQUEST_CANCELED) 도 여기로 옴 — 조용히 false.
+    const code = (e as { code?: string }).code;
+    if (code !== "ERR_REQUEST_CANCELED" && code !== "ERR_CANCELED") {
+      console.warn("apple sign-in failed", e);
+    }
+    return false;
+  }
 }
 
 export async function getStoredUser(): Promise<{ id: number; email: string; displayName?: string } | null> {

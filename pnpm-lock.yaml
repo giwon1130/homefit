@@ -20,6 +20,9 @@ importers:
       expo:
         specifier: ~54.0.0
         version: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@4.0.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1)))(expo-router@4.0.22)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)(typescript@5.6.3)
+      expo-apple-authentication:
+        specifier: ^55.0.13
+        version: 55.0.13(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1))
       expo-auth-session:
         specifier: ~6.0.0
         version: 6.0.3(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
@@ -2396,6 +2399,12 @@ packages:
   event-target-shim@5.0.1:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
     engines: {node: '>=6'}
+
+  expo-apple-authentication@55.0.13:
+    resolution: {integrity: sha512-Qvh3DmhXqhtWOe7BC9e7UVApR3XS1qE7+68tVLqb3KI/sET7QV9KT5JgOJogWmmCJVxA/kaot0M136yvW1pdWA==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
 
   expo-application@6.0.2:
     resolution: {integrity: sha512-qcj6kGq3mc7x5yIb5KxESurFTJCoEKwNEL34RdPEvTB/xhl7SeVZlu05sZBqxB1V4Ryzq/LsCb7NHNfBbb3L7A==}
@@ -7507,6 +7516,11 @@ snapshots:
   etag@1.8.1: {}
 
   event-target-shim@5.0.1: {}
+
+  expo-apple-authentication@55.0.13(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1)):
+    dependencies:
+      expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@4.0.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1)))(expo-router@4.0.22)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)(typescript@5.6.3)
+      react-native: 0.81.5(@babel/core@7.29.0)(@types/react@18.3.28)(react@18.3.1)
 
   expo-application@6.0.2(expo@54.0.33):
     dependencies:

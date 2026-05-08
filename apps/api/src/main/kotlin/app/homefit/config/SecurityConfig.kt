@@ -27,6 +27,7 @@ class SecurityConfig {
                         "/actuator/health",
                         "/api/v1/ping",
                         "/api/v1/auth/google",
+                        "/api/v1/auth/apple",
                         "/api/v1/auth/refresh",
                         "/api/v1/admin/**",   // X-Admin-Token 자체 검증, JWT 불필요
                         "/error",

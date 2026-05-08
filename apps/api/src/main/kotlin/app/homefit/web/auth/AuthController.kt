@@ -25,6 +25,13 @@ class AuthController(
         return AuthTokensResponse.from(tokens)
     }
 
+    @PostMapping("/apple")
+    fun apple(@Valid @RequestBody req: AppleSignInRequest): AuthTokensResponse {
+        val tokens = authService.signInWithApple(req.idToken, req.displayName)
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid apple id token")
+        return AuthTokensResponse.from(tokens)
+    }
+
     @PostMapping("/refresh")
     fun refresh(@Valid @RequestBody req: RefreshRequest): AuthTokensResponse {
         val tokens = authService.refresh(req.refreshToken)
