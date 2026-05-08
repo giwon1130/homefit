@@ -10,6 +10,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "청약", tabBarLabel: "청약" }} />
       <Tabs.Screen name="match" options={{ title: "내맞춤", tabBarLabel: "내맞춤" }} />
+      <Tabs.Screen name="favorites" options={{ title: "즐겨찾기", tabBarLabel: "즐겨찾기" }} />
       <Tabs.Screen name="profile" options={{ title: "프로필", tabBarLabel: "프로필" }} />
     </Tabs>
   );
