@@ -13,7 +13,7 @@
 |:---:|:---:|:---:|
 | ![목록](docs/screenshots/list.png) | ![상세](docs/screenshots/detail.png) | ![자격](docs/screenshots/eligibility.png) |
 
-> 라이브 웹 캡쳐를 `docs/screenshots/` 에 추가합니다(작업 예정).
+> 웹(Next.js) 화면. 자격 판정 카드는 프로필(혼인·소득·자녀·무주택) 기반으로 신혼부부/생애최초/다자녀/일반공급 자격을 근거와 함께 계산해 보여줍니다.
 
 ## 한눈에
 
