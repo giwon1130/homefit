@@ -1,6 +1,34 @@
-# homefit
+# 홈핏 (homefit) — 청약·전세·매매 통합 추천
 
-청약 · 전세 · 매매 통합 추천 앱. 신혼부부 / 자녀 있는 가족을 타겟으로, **내 조건에 맞는 청약**만 **출퇴근 가능한 지역**에서 **감당되는 금액**으로 골라준다.
+> 신혼부부·자녀 가구를 위해 **내 조건에 맞는 청약**만, **출퇴근 가능한 지역**에서, **감당되는 금액**으로 골라줘요.
+> 핵심은 **자격 판정 엔진**(생애최초/신혼부부/다자녀 중 유리한 유형 계산).
+
+<p>🌐 웹 라이브(Next.js) · 🔐 Google 로그인 · ⚙️ Spring Boot·PostgreSQL·Railway · 📱 모바일(Expo)은 Phase 2+</p>
+
+🔗 **라이브 웹**: https://web-production-ac95e.up.railway.app
+
+## 📸 스크린샷
+
+| 청약 목록 | 청약 상세 | 자격 판정 / 프로필 |
+|:---:|:---:|:---:|
+| ![목록](docs/screenshots/list.png) | ![상세](docs/screenshots/detail.png) | ![자격](docs/screenshots/eligibility.png) |
+
+> 라이브 웹 캡쳐를 `docs/screenshots/` 에 추가합니다(작업 예정).
+
+## 한눈에
+
+**홈핏**은 흩어진 청약 정보를 "내가 넣을 수 있는 것"으로 좁혀주는 추천 서비스입니다.
+
+- **청약 데이터 자동 수집** — 청약홈 분양정보 API 6시간 cron 싱크
+- **자격 판정 엔진 v1** — 생애최초 / 신혼부부 / 다자녀 / 일반 중 유리한 유형 계산
+- **프로필 + 청약 가점** — 민감 필드 AES-256 암호화
+- **(Phase 2) 도어투도어 통근시간** — 본인+배우자 회사 둘 다 고려(PostGIS + ODsay)
+- **(Phase 3) 대안 추천** — 당첨 난이도 높으면 같은 지역 전/월/매매 제안
+
+## 🛠 기술 스택
+Next.js 15 + Tailwind(웹) · Spring Boot(Kotlin) · PostgreSQL(Flyway) · Google OAuth + JWT · Railway(API·Ingestion·Web 분리 배포) · Expo(모바일, Phase 2+)
+
+---
 
 ## 현재 상태 (Phase 1)
 
